@@ -22,7 +22,7 @@ def get_gpus_memory():
     return gpus_memory
 
 
-def setup_gpus(allow_growth=True, memory_fraction=.75):
+def setup_gpus(allow_growth=True, memory_fraction=.70):
     """Setup GPUs.
 
     Parameters:
