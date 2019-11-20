@@ -44,6 +44,8 @@ class Data:
     maxlen = None
     letters_size = None
     niqqud_size = None
+    input_validation = None
+    niqqud_validation = None
 
     def merge(self, q, p):
 
@@ -69,7 +71,7 @@ class Data:
         return res
 
 
-def load_bible(batch_size) -> Data:
+def load_bible(batch_size, validation=0.2) -> Data:
     data = Data()
     with open('bible_text/bible.txt', encoding='utf-8') as f:
         input_texts, _, _, niqqud_texts = translation.unzip_dotted_lines(f)
@@ -87,4 +89,8 @@ def load_bible(batch_size) -> Data:
     _, data.maxlen, data.letters_size = input_texts.shape
 
     data.input_texts, data.niqqud_texts = unison_shuffled_copies(input_texts, niqqud_texts)
+
+    v = int(m*(1-validation))
+    data.input_texts, data.input_validation = data.input_texts[:v], data.input_texts[v:]
+    data.niqqud_texts, data.niqqud_validation = data.niqqud_texts[:v], data.niqqud_texts[v:]
     return data
