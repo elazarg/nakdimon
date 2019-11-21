@@ -16,13 +16,13 @@ PRELOAD = False
 TRAIN = True
 
 data = dataset.load_file(BATCH_SIZE, 0.1, filenames=['bible_text/bible.txt', 'short_table/short_table.txt'])
-
+# 64 256 256
 model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(data.letters_size, 32,  input_length=data.maxlen,
+    tf.keras.layers.Embedding(data.letters_size, 64,  input_length=data.maxlen,
                               batch_size=BATCH_SIZE,
                               mask_zero=True),
-    tf.keras.layers.Bidirectional(tf.keras.layers.GRU(128, return_sequences=True)),
-    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Bidirectional(tf.keras.layers.GRU(256, return_sequences=True)),
+    tf.keras.layers.Dense(256, activation='relu'),
     tf.keras.layers.Dense(data.niqqud_size),
 ])
 
