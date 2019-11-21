@@ -15,9 +15,10 @@ for s in soup.find_all('b'):
 text = soup.get_text()
 text = '\n'.join(text.split('\n')[620:-2])
 
+text = re.sub(' [\u05d0-\u05ea)]+. ', ' ', text)
 text = re.sub(r'\.', '\n', text)
-text = '\n'.join(x.strip() for x in text.split('\n') if x.strip())
-# text = re.sub('\n[^\u05d0-\u05ea)]\n', '\n', text)
+
+text = '\n'.join(' '.join(x.strip().split()) for x in text.split('\n') if x.strip())
 # text = re.sub(r' \.', '.', text)
 # text = re.sub(' ?\n[ \n]*', '\n', text)
 # text = re.sub('\n[^\u0591-\u05c7]+\n', '\n', text)

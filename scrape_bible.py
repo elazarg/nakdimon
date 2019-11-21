@@ -57,7 +57,7 @@ def iterate_dotted_text(line):
         c = line[i]
         i += 1
         if is_text(c):
-            if line[i] == '\u05bc' and c != 'ו':
+            if line[i] == '\u05bc' and (c != 'ו' or is_niqqud(line[i+1])):
                 dagesh = line[i]
                 i += 1
             if line[i] in '\u05c1\u05c2':

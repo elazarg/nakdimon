@@ -37,7 +37,7 @@ def setup_gpus(allow_growth=True, memory_fraction=.70):
             for i, gpu in enumerate(gpus):
                 memory = get_gpus_memory()[i]
 
-                # tf.config.experimental.set_memory_growth(gpu, allow_growth)
+                tf.config.experimental.set_memory_growth(gpu, allow_growth)
 
                 # Setting memory limit to max*fraction
                 tf.config.experimental.set_virtual_device_configuration(gpu,

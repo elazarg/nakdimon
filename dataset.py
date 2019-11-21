@@ -1,6 +1,7 @@
 import tensorflow as tf
 import scrape_bible
 import numpy as np
+from dataclasses import dataclass
 
 
 class CharacterTable:
@@ -21,9 +22,12 @@ class CharacterTable:
         ]
 
     def to_ids_padded(self, css, maxlen=None):
-        return tf.keras.preprocessing.sequence.pad_sequences(self.to_ids(css), maxlen=maxlen, dtype='int32',
+        return tf.keras.preprocessing.sequence.pad_sequences(self.to_ids(css), maxlen=400, dtype='int32',
                                                              padding='post', truncating='post',
                                                              value=self.char_indices[self.PAD_TOKEN])
+
+    def __repr__(self):
+        return repr(self.chars)
 
 
 def unison_shuffled_copies(a, b):
@@ -36,23 +40,24 @@ def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
+@dataclass
 class Data:
-    input_texts = None
-    niqqud_texts = None
-    letters_table = None
-    niqqud_table = None
-    maxlen = None
-    letters_size = None
-    niqqud_size = None
-    input_validation = None
-    niqqud_validation = None
+    input_text: np.ndarray = None
+    niqqud_texts: np.ndarray = None
+    input_validation: np.ndarray = None
+    niqqud_validation: np.ndarray = None
+    letters_table: CharacterTable = None
+    niqqud_table: CharacterTable = None
+    maxlen: int = None
+    letters_size: int = None
+    niqqud_size: int = None
 
-    def merge(self, q, p):
+    def merge(self, texts, p):
 
         # for cs in css:
         #     del cs[cs.index(self.char_indices[self.PAD_TOKEN]):]
         #     del cs[0]
-        texts = from_categorical(q)
+        # texts = from_categorical(q)
         niqquds = from_categorical(p)
         assert len(texts) == len(niqquds)
         res = []
@@ -71,22 +76,30 @@ class Data:
         return res
 
 
-def load_bible(batch_size, validation=0.2) -> Data:
+def load_file(batch_size, validation=0.2, filenames=['bible_text/bible.txt']) -> Data:
     data = Data()
-    with open('bible_text/bible.txt', encoding='utf-8') as f:
-        input_texts, _, _, niqqud_texts = scrape_bible.unzip_dotted_lines(f)
-        data.letters_table = CharacterTable(''.join(x for xs in input_texts for x in xs))
-        data.niqqud_table = CharacterTable(''.join(x for xs in niqqud_texts for x in xs))
+    input_texts = []
+    niqqud_texts = []
+    for filename in filenames:
+        with open(filename, encoding='utf-8') as f:
+            part_input_texts, _, _, part_niqqud_texts = scrape_bible.unzip_dotted_lines(f)
+        input_texts.extend(part_input_texts)
+        niqqud_texts.extend(part_niqqud_texts)
+    data.letters_table = CharacterTable(''.join(x for xs in input_texts for x in xs))
+    data.niqqud_table = CharacterTable(''.join(x for xs in niqqud_texts for x in xs))
 
-        input_texts = data.letters_table.to_ids_padded(input_texts)
-        niqqud_texts = data.niqqud_table.to_ids_padded(niqqud_texts)
+    input_texts = data.letters_table.to_ids_padded(input_texts)
+    niqqud_texts = data.niqqud_table.to_ids_padded(niqqud_texts)
 
     m = len(input_texts) // batch_size * batch_size
-    input_texts = tf.keras.utils.to_categorical(input_texts[:m])
+    input_texts = input_texts[:m]
+    # input_texts = tf.keras.utils.to_categorical(input_texts)
     niqqud_texts = tf.keras.utils.to_categorical(niqqud_texts[:m])
 
     _, _, data.niqqud_size = niqqud_texts.shape
-    _, data.maxlen, data.letters_size = input_texts.shape
+    _, data.maxlen, = input_texts.shape
+
+    data.letters_size = len(data.letters_table)
 
     data.input_texts, data.niqqud_texts = unison_shuffled_copies(input_texts, niqqud_texts)
 
