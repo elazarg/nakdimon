@@ -57,7 +57,7 @@ def iterate_dotted_text(line):
         c = line[i]
         i += 1
         if is_text(c):
-            if line[i] == '\u05bc':
+            if line[i] == '\u05bc' and c != 'ו':
                 dagesh = line[i]
                 i += 1
             if line[i] in '\u05c1\u05c2':
@@ -84,6 +84,15 @@ def unzip_dotted_lines(lines):
     return ws, xs, ys, zs
 
 
+def merge(chars, niqqud):
+    sentence = []
+    for c, n in zip(chars, niqqud):
+        sentence.append(c)
+        if n != '_':
+            sentence.append(n)
+    return ''.join(sentence)
+
+
 def run_all():
     chars = set()
     with open('bible_text/bible.txt', 'w', encoding='utf-8') as bible:
@@ -93,12 +102,9 @@ def run_all():
                     continue
                 text = ''.join(html_to_text('bible_html/' + fname))
                 w, x, y, z = unzip_dotted_text(text)
-                print(w)
-                print(x)
-                print(y)
-                print(z)
+                print(fname, ':')
+                print(merge(w, z))
                 undotted_text = re.sub(r'[\u0591-\u05c7]', '', text)
-                print(fname, ':', len(text.replace('-', ' ').split()))
                 with open('bible_text/' + fname[:-4] + '.txt', 'w', encoding='utf-8') as f:
                     f.write(text)
                 bible.write(text)
