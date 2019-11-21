@@ -15,6 +15,7 @@ for s in soup.find_all('b'):
 text = soup.get_text()
 text = '\n'.join(text.split('\n')[620:-2])
 
+text = re.sub(',', '', text)
 text = re.sub(' [\u05d0-\u05ea)]+. ', ' ', text)
 text = re.sub(r'\.', '\n', text)
 
