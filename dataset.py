@@ -1,5 +1,5 @@
 import tensorflow as tf
-import translation
+import scrape_bible
 import numpy as np
 
 
@@ -74,7 +74,7 @@ class Data:
 def load_bible(batch_size, validation=0.2) -> Data:
     data = Data()
     with open('bible_text/bible.txt', encoding='utf-8') as f:
-        input_texts, _, _, niqqud_texts = translation.unzip_dotted_lines(f)
+        input_texts, _, _, niqqud_texts = scrape_bible.unzip_dotted_lines(f)
         data.letters_table = CharacterTable(''.join(x for xs in input_texts for x in xs))
         data.niqqud_table = CharacterTable(''.join(x for xs in niqqud_texts for x in xs))
 
