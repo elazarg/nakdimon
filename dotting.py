@@ -27,16 +27,13 @@ data = dataset.load_file(BATCH_SIZE, 0.1, filenames=['bible_text/bible.txt', 'sh
 #   128  512  512:         92.0  after 10 epochs, batch=64
 #   256 1024 1024:         92.96 after 10 epochs, batch=64
 EMBED_DIM = 256
-model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  input_length=data.maxlen,
-                              batch_size=BATCH_SIZE,
-                              mask_zero=True),
-    tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum'),
-    tf.keras.layers.Dense(EMBED_DIM*4, activation='relu'),
-    tf.keras.layers.Dense(data.niqqud_size),
-])
+inp = tf.keras.Input(shape=(data.maxlen,), batch_size=BATCH_SIZE)
+h = tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  mask_zero=True)(inp)
+h = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
+h = tf.keras.layers.Dense(EMBED_DIM*4, activation='relu')(h)
+output = tf.keras.layers.Dense(data.niqqud_size)(h)
 
-# best: mean_squared_logarithmic_error, stateless
+model = tf.keras.Model(inputs=[inp], outputs=[output])
 
 model.compile(loss='mean_squared_logarithmic_error',
               optimizer='adam',
