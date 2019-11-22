@@ -44,7 +44,7 @@ def from_categorical(t):
 
 @dataclass
 class Data:
-    input_text: np.ndarray = None
+    input_texts: np.ndarray = None
     dagesh_texts: np.ndarray = None
     sin_texts: np.ndarray = None
     niqqud_texts: np.ndarray = None
@@ -53,28 +53,43 @@ class Data:
     sin_validation: np.ndarray = None
     niqqud_validation: np.ndarray = None
     letters_table: CharacterTable = None
+    dagesh_table: CharacterTable = None
+    sin_table: CharacterTable = None
     niqqud_table: CharacterTable = None
     maxlen: int = None
     letters_size: int = None
+    dagesh_size: int = None
+    sin_size: int = None
     niqqud_size: int = None
 
-    def merge(self, texts, p):
+    def merge(self, texts, ds, ss, ns):
 
         # for cs in css:
         #     del cs[cs.index(self.char_indices[self.PAD_TOKEN]):]
         #     del cs[0]
         # texts = from_categorical(q)
-        niqquds = from_categorical(p)
+        dageshs = from_categorical(ds)
+        sins = from_categorical(ss)
+        niqquds = from_categorical(ns)
         assert len(texts) == len(niqquds)
         res = []
         for i in range(len(texts)):
             sentence = []
-            for ci, ni in zip(texts[i], niqquds[i]):
+            for ci, di, si, ni in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
                 if ci == self.letters_table.char_indices[self.letters_table.START_TOKEN]:
                     continue
                 if ci == self.letters_table.char_indices[self.letters_table.PAD_TOKEN]:
                     break
                 sentence.append(self.letters_table.indices_char[ci])
+
+                d = self.dagesh_table.indices_char[di]
+                if d != '_':
+                    sentence.append(d)
+
+                s = self.sin_table.indices_char[si]
+                if s != '_':
+                    sentence.append(s)
+
                 n = self.niqqud_table.indices_char[ni]
                 if n != '_':
                     sentence.append(n)

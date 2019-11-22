@@ -15,7 +15,7 @@ EPOCHS = 1
 PRELOAD = False
 TRAIN = True
 
-data = dataset.load_file(BATCH_SIZE, 0.1,
+data = dataset.load_file(BATCH_SIZE, 0.5,
                          filenames=['texts/bible.txt', 'texts/short_table.txt', 'texts/treasure_island.txt'])
 
 #     1    4    4:         23.04 after 10 epochs, batch=64
@@ -27,14 +27,17 @@ data = dataset.load_file(BATCH_SIZE, 0.1,
 #    64  256  256:         91.2  after 10 epochs, batch=64
 #   128  512  512:         92.0  after 10 epochs, batch=64
 #   256 1024 1024:         92.96 after 10 epochs, batch=64
-EMBED_DIM = 64
+EMBED_DIM = 16
 inp = tf.keras.Input(shape=(data.maxlen,), batch_size=BATCH_SIZE)
 h = tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  mask_zero=True)(inp)
 h = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
 h = tf.keras.layers.Dense(EMBED_DIM*4, activation='relu')(h)
-output = tf.keras.layers.Dense(data.niqqud_size)(h)
 
-model = tf.keras.Model(inputs=[inp], outputs=[output])
+output_dagesh = tf.keras.layers.Dense(data.dagesh_size)(h)
+output_sin = tf.keras.layers.Dense(data.sin_size)(h)
+output_niqqud = tf.keras.layers.Dense(data.niqqud_size)(h)
+
+model = tf.keras.Model(inputs=[inp], outputs=[output_dagesh, output_sin, output_niqqud])
 
 model.compile(loss='mean_squared_logarithmic_error',
               optimizer='adam',
@@ -45,10 +48,10 @@ model.summary()
 if PRELOAD:
     model.load_weights(tf.train.latest_checkpoint('niqqud_checkpoints/'))
 if TRAIN:
-    model.fit(data.input_texts, data.niqqud_texts,
+    model.fit(data.input_texts, [data.dagesh_texts, data.sin_texts, data.niqqud_texts],
               batch_size=BATCH_SIZE,
               epochs=EPOCHS,
-              validation_data=(data.input_validation, data.niqqud_validation),
+              validation_data=(data.input_validation, [data.dagesh_validation, data.sin_validation, data.niqqud_validation]),
               callbacks=[
                   # tf.keras.callbacks.ModelCheckpoint(filepath='niqqud_checkpoints/ckpt_{epoch}', save_weights_only=True),
                   tf.keras.callbacks.EarlyStopping(monitor='accuracy', patience=3, verbose=1),
@@ -58,11 +61,12 @@ if TRAIN:
               ]
               )
 
-model = tf.keras.Model(inputs=[inp], outputs=[tf.keras.layers.Softmax()(output)])
+model = tf.keras.Model(inputs=[inp],
+                       outputs=[tf.keras.layers.Softmax()(x) for x in (output_dagesh, output_sin, output_niqqud)])
 
 q = data.input_texts[0:BATCH_SIZE]
-p = model.predict(q)
-results = data.merge(q, p)
+[d, s, n] = model.predict(q)
+results = data.merge(q, d, s, n)
 
 for r in results:
     print(r)
