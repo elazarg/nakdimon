@@ -9,7 +9,7 @@ gpu_utils.setup_gpus()
 
 BUFFER_SIZE = 10000
 BATCH_SIZE = 64  # 512
-EPOCHS = 10
+EPOCHS = 5
 
 
 PRELOAD = False
@@ -17,14 +17,21 @@ TRAIN = True
 
 data = dataset.load_file(BATCH_SIZE, 0.1, filenames=['bible_text/bible.txt', 'short_table/short_table.txt'])
 
-EMBED_DIM = 128
-#  64 256 256: ~91.2 after 10 epochs
-# 128 512 512: 92.0 after 10 epochs
+#     1    4    4:         23.04 after 10 epochs, batch=64
+#     2    8    8:         69.75 after 10 epochs, batch=64
+#     4   16   16:         70.14 after 10 epochs, batch=64
+#     8   32   32:         80.74 after 10 epochs, batch=64
+#    16   64   64: 72.67, 76.20, 78.48, 79.45, 80.11, 86.75 after 10 epochs, batch=64
+#    32  128  128:         88.2  after 10 epochs, batch=64
+#    64  256  256:         91.2  after 10 epochs, batch=64
+#   128  512  512:         92.0  after 10 epochs, batch=64
+#   256 1024 1024:         92.96 after 10 epochs, batch=64
+EMBED_DIM = 256
 model = tf.keras.Sequential([
     tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  input_length=data.maxlen,
                               batch_size=BATCH_SIZE,
                               mask_zero=True),
-    tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True)),
+    tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum'),
     tf.keras.layers.Dense(EMBED_DIM*4, activation='relu'),
     tf.keras.layers.Dense(data.niqqud_size),
 ])
