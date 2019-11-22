@@ -30,10 +30,12 @@ class CharacterTable:
         return repr(self.chars)
 
 
-def unison_shuffled_copies(a, b):
-    assert len(a) == len(b)
-    p = np.random.permutation(len(a))
-    return a[p], b[p]
+def unison_shuffled_copies(*texts):
+    n = len(texts[0])
+    for t in texts:
+        assert len(t) == n
+    p = np.random.permutation(n)
+    return [t[p] for t in texts]
 
 
 def from_categorical(t):
@@ -43,8 +45,12 @@ def from_categorical(t):
 @dataclass
 class Data:
     input_text: np.ndarray = None
+    dagesh_texts: np.ndarray = None
+    sin_texts: np.ndarray = None
     niqqud_texts: np.ndarray = None
     input_validation: np.ndarray = None
+    dagesh_validation: np.ndarray = None
+    sin_validation: np.ndarray = None
     niqqud_validation: np.ndarray = None
     letters_table: CharacterTable = None
     niqqud_table: CharacterTable = None
@@ -76,34 +82,48 @@ class Data:
         return res
 
 
-def load_file(batch_size, validation=0.2, filenames=['bible_text/bible.txt']) -> Data:
+def load_file(batch_size, validation, filenames) -> Data:
     data = Data()
     input_texts = []
+    dagesh_texts = []
+    sin_texts = []
     niqqud_texts = []
     for filename in filenames:
         with open(filename, encoding='utf-8') as f:
-            part_input_texts, _, _, part_niqqud_texts = scrape_bible.unzip_dotted_lines(f)
+            part_input_texts, part_dagesh_texts, part_sin_texts, part_niqqud_texts = scrape_bible.unzip_dotted_lines(f)
         input_texts.extend(part_input_texts)
+        dagesh_texts.extend(part_dagesh_texts)
+        sin_texts.extend(part_sin_texts)
         niqqud_texts.extend(part_niqqud_texts)
     data.letters_table = CharacterTable(''.join(x for xs in input_texts for x in xs))
+    data.dagesh_table = CharacterTable(''.join(x for xs in dagesh_texts for x in xs))
+    data.sin_table = CharacterTable(''.join(x for xs in sin_texts for x in xs))
     data.niqqud_table = CharacterTable(''.join(x for xs in niqqud_texts for x in xs))
 
     input_texts = data.letters_table.to_ids_padded(input_texts)
+    dagesh_texts = data.dagesh_table.to_ids_padded(dagesh_texts)
+    sin_texts = data.sin_table.to_ids_padded(sin_texts)
     niqqud_texts = data.niqqud_table.to_ids_padded(niqqud_texts)
 
     m = len(input_texts) // batch_size * batch_size
     input_texts = input_texts[:m]
     # input_texts = tf.keras.utils.to_categorical(input_texts)
+    dagesh_texts = tf.keras.utils.to_categorical(dagesh_texts[:m])
+    sin_texts = tf.keras.utils.to_categorical(sin_texts[:m])
     niqqud_texts = tf.keras.utils.to_categorical(niqqud_texts[:m])
 
+    _, _, data.dagesh_size = dagesh_texts.shape
+    _, _, data.sin_size = sin_texts.shape
     _, _, data.niqqud_size = niqqud_texts.shape
     _, data.maxlen, = input_texts.shape
 
     data.letters_size = len(data.letters_table)
 
-    data.input_texts, data.niqqud_texts = unison_shuffled_copies(input_texts, niqqud_texts)
+    data.input_texts, data.dagesh_texts, data.sin_texts, data.niqqud_texts = unison_shuffled_copies(input_texts, dagesh_texts, sin_texts, niqqud_texts)
 
     v = int(m*(1-validation))
     data.input_texts, data.input_validation = data.input_texts[:v], data.input_texts[v:]
+    data.dagesh_texts, data.dagesh_validation = data.dagesh_texts[:v], data.dagesh_texts[v:]
+    data.sin_texts, data.sin_validation = data.sin_texts[:v], data.sin_texts[v:]
     data.niqqud_texts, data.niqqud_validation = data.niqqud_texts[:v], data.niqqud_texts[v:]
     return data

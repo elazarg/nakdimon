@@ -9,13 +9,14 @@ gpu_utils.setup_gpus()
 
 BUFFER_SIZE = 10000
 BATCH_SIZE = 64  # 512
-EPOCHS = 5
+EPOCHS = 1
 
 
 PRELOAD = False
 TRAIN = True
 
-data = dataset.load_file(BATCH_SIZE, 0.1, filenames=['bible_text/bible.txt', 'short_table/short_table.txt'])
+data = dataset.load_file(BATCH_SIZE, 0.1,
+                         filenames=['texts/bible.txt', 'texts/short_table.txt', 'texts/treasure_island.txt'])
 
 #     1    4    4:         23.04 after 10 epochs, batch=64
 #     2    8    8:         69.75 after 10 epochs, batch=64
@@ -26,7 +27,7 @@ data = dataset.load_file(BATCH_SIZE, 0.1, filenames=['bible_text/bible.txt', 'sh
 #    64  256  256:         91.2  after 10 epochs, batch=64
 #   128  512  512:         92.0  after 10 epochs, batch=64
 #   256 1024 1024:         92.96 after 10 epochs, batch=64
-EMBED_DIM = 256
+EMBED_DIM = 64
 inp = tf.keras.Input(shape=(data.maxlen,), batch_size=BATCH_SIZE)
 h = tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  mask_zero=True)(inp)
 h = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
@@ -57,7 +58,7 @@ if TRAIN:
               ]
               )
 
-model.add(tf.keras.layers.Softmax())
+model = tf.keras.Model(inputs=[inp], outputs=[tf.keras.layers.Softmax()(output)])
 
 q = data.input_texts[0:BATCH_SIZE]
 p = model.predict(q)
