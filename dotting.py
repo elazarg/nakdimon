@@ -9,13 +9,13 @@ gpu_utils.setup_gpus()
 
 BUFFER_SIZE = 10000
 BATCH_SIZE = 64  # 512
-EPOCHS = 1
+EPOCHS = 5
 
 
 PRELOAD = False
 TRAIN = True
 
-data = dataset.load_file(BATCH_SIZE, 0.5,
+data = dataset.load_file(BATCH_SIZE, 0.05,
                          filenames=['texts/bible.txt', 'texts/short_table.txt', 'texts/treasure_island.txt'])
 
 #     1    4    4:         23.04 after 10 epochs, batch=64
@@ -27,19 +27,27 @@ data = dataset.load_file(BATCH_SIZE, 0.5,
 #    64  256  256:         91.2  after 10 epochs, batch=64
 #   128  512  512:         92.0  after 10 epochs, batch=64
 #   256 1024 1024:         92.96 after 10 epochs, batch=64
-EMBED_DIM = 16
+EMBED_DIM = 32
+FACTOR = 4
+
 inp = tf.keras.Input(shape=(data.maxlen,), batch_size=BATCH_SIZE)
 h = tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  mask_zero=True)(inp)
-h = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
-h = tf.keras.layers.Dense(EMBED_DIM*4, activation='relu')(h)
+h = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*FACTOR, return_sequences=True), merge_mode='sum')(h)
 
-output_dagesh = tf.keras.layers.Dense(data.dagesh_size)(h)
-output_sin = tf.keras.layers.Dense(data.sin_size)(h)
-output_niqqud = tf.keras.layers.Dense(data.niqqud_size)(h)
+h = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+
+# h_dagesh = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+# h_sin = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+# h = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+
+output_dagesh = tf.keras.layers.Dense(data.dagesh_size, name='Dagesh')(h)
+output_sin = tf.keras.layers.Dense(data.sin_size, name='Sin')(h)
+output_niqqud = tf.keras.layers.Dense(data.niqqud_size, name='Niqqud')(h)
 
 model = tf.keras.Model(inputs=[inp], outputs=[output_dagesh, output_sin, output_niqqud])
 
-model.compile(loss='mean_squared_logarithmic_error',
+model.compile(loss=['mean_squared_logarithmic_error', 'mean_squared_logarithmic_error', 'mean_squared_logarithmic_error'],
+              lossWeights=[0.048, 0.002, 0.95],
               optimizer='adam',
               metrics=['accuracy'])
 plot_model(model, to_file='model.png')
@@ -54,7 +62,7 @@ if TRAIN:
               validation_data=(data.input_validation, [data.dagesh_validation, data.sin_validation, data.niqqud_validation]),
               callbacks=[
                   # tf.keras.callbacks.ModelCheckpoint(filepath='niqqud_checkpoints/ckpt_{epoch}', save_weights_only=True),
-                  tf.keras.callbacks.EarlyStopping(monitor='accuracy', patience=3, verbose=1),
+                  tf.keras.callbacks.EarlyStopping(monitor='Niqqud_accuracy', patience=3, verbose=1),
                   tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.2, patience=0, min_lr=0.001),
                   # tf.keras.callbacks.TensorBoard(log_dir='logs\\fit\\', histogram_freq=1),
                   # tf.keras.LambdaCallback(on_epoch_end=lambda batch, logs: print(batch))

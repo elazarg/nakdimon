@@ -84,7 +84,7 @@ class Data:
 
                 d = self.dagesh_table.indices_char[di]
                 if d != '_':
-                    sentence.append(d)
+                    sentence.append('\u05bc')
 
                 s = self.sin_table.indices_char[si]
                 if s != '_':
