@@ -18,40 +18,43 @@ TRAIN = True
 data = dataset.load_file(BATCH_SIZE, 0.05,
                          filenames=['texts/bible.txt', 'texts/short_table.txt', 'texts/treasure_island.txt'])
 
-#     1    4    4:         23.04 after 10 epochs, batch=64
-#     2    8    8:         69.75 after 10 epochs, batch=64
-#     4   16   16:         70.14 after 10 epochs, batch=64
-#     8   32   32:         80.74 after 10 epochs, batch=64
-#    16   64   64: 72.67, 76.20, 78.48, 79.45, 80.11, 86.75 after 10 epochs, batch=64
-#    32  128  128:         88.2  after 10 epochs, batch=64
-#    64  256  256:         91.2  after 10 epochs, batch=64
-#   128  512  512:         92.0  after 10 epochs, batch=64
-#   256 1024 1024:         92.96 after 10 epochs, batch=64
-EMBED_DIM = 32
-FACTOR = 4
-
+EMBED_DIM = 128
+F = 4
 inp = tf.keras.Input(shape=(data.maxlen,), batch_size=BATCH_SIZE)
-h = tf.keras.layers.Embedding(data.letters_size, EMBED_DIM,  mask_zero=True)(inp)
-h = tf.keras.layers.Bidirectional(tf.keras.layers.GRU(EMBED_DIM*FACTOR, return_sequences=True), merge_mode='sum')(h)
+h = layers.Embedding(data.letters_size, EMBED_DIM, mask_zero=True)(inp)
+# h = layers.Bidirectional(layers.GRU(EMBED_DIM*FACTOR, return_sequences=True), merge_mode='sum')(h)
+h = layers.Bidirectional(layers.GRU(EMBED_DIM*F, return_sequences=True), merge_mode='sum')(h)
+# h1 = layers.Bidirectional(layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
+# h = layers.Add()([h, h1])
+for k in range(3):
+    h = layers.Dropout(0.1)(h)
+    h1 = layers.Dense(EMBED_DIM*F, activation='relu')(h)
+    h = layers.Add()([h, h1])
+    
+h = layers.Dropout(0.1)(h)
+# h = layers.Conv1D(32, 2, activation='relu')(h)
+# h_dagesh = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+# h_sin = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+# h = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
 
-h = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+# output_dagesh = layers.Dense(data.dagesh_size, name='Dagesh')(h)
+# output_sin = layers.Dense(data.sin_size, name='Sin')(h)
+h = layers.Dense(data.niqqud_size, name='Niqqud')(h)
+# h = layers.Dropout(0.1)(h)
+# model_dagesh = tf.keras.Model(inputs=[inp], outputs=[output_dagesh])
+# model_sin = tf.keras.Model(inputs=[inp], outputs=[output_sin])
+model_niqqud = tf.keras.Model(inputs=[inp], outputs=[h])
+# model = tf.keras.Model(inputs=[inp], outputs=[output_dagesh, output_sin, output_niqqud])
 
-# h_dagesh = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
-# h_sin = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
-# h = tf.keras.layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
+# lr=0.003
+adam = tf.keras.optimizers.Adam(learning_rate=0.003, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
-output_dagesh = tf.keras.layers.Dense(data.dagesh_size, name='Dagesh')(h)
-output_sin = tf.keras.layers.Dense(data.sin_size, name='Sin')(h)
-output_niqqud = tf.keras.layers.Dense(data.niqqud_size, name='Niqqud')(h)
+# model_dagesh.compile(loss='mean_squared_logarithmic_error', optimizer='adam', metrics=['accuracy'])
+# model_sin.compile(loss='mean_squared_logarithmic_error', optimizer='adam', metrics=['accuracy'])
+model_niqqud.compile(loss='mean_squared_logarithmic_error', optimizer=adam, metrics=['accuracy'])
 
-model = tf.keras.Model(inputs=[inp], outputs=[output_dagesh, output_sin, output_niqqud])
-
-model.compile(loss=['mean_squared_logarithmic_error', 'mean_squared_logarithmic_error', 'mean_squared_logarithmic_error'],
-              lossWeights=[0.048, 0.002, 0.95],
-              optimizer='adam',
-              metrics=['accuracy'])
-plot_model(model, to_file='model.png')
-model.summary()
+plot_model(model_niqqud, to_file='model.png')
+model_niqqud.summary()
 
 if PRELOAD:
     model.load_weights(tf.train.latest_checkpoint('niqqud_checkpoints/'))
