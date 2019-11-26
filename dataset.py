@@ -1,12 +1,61 @@
 import tensorflow as tf
-import scrape_bible
 import numpy as np
-from dataclasses import dataclass
+
+
+def is_text(c):
+    return '\u05d0' <= c <= '\u05ea'
+
+
+def is_niqqud(c):
+    return '\u0591' <= c <= '\u05c7'
+
+
+def iterate_dotted_text(line):
+    n = len(line)
+    line += '  '
+    i = 0
+    while i < n:
+        dagesh = '_'
+        niqqud = '_'
+        sin = '_'
+        c = line[i]
+        i += 1
+        if is_text(c):
+            if line[i] == '\u05bc' and (c != 'ו' or is_niqqud(line[i+1])):
+                dagesh = line[i]
+                i += 1
+            if line[i] in '\u05c1\u05c2':
+                sin = line[i]
+                i += 1
+            if is_niqqud(line[i]):
+                niqqud = line[i]
+                i += 1
+        yield (c, sin, dagesh, niqqud)
+
+
+def unzip_dotted_text(line):
+    return zip(*iterate_dotted_text(line))
+
+
+def unzip_dotted_lines(lines, maxlen):
+    ws, xs, ys, zs = [], [], [], []
+    for line in lines:
+        w, x, y, z = zip(*iterate_dotted_text(line))
+        
+        line = ''.join(w)
+        n = line.rfind(' ')
+        if n <= 0 or len(line) < maxlen:
+            continue
+        ws.append(w[:n])
+        xs.append(x[:n])
+        ys.append(y[:n])
+        zs.append(z[:n])
+    return ws, xs, ys, zs
 
 
 class CharacterTable:
-    START_TOKEN = '!'
-    PAD_TOKEN = '.'
+    START_TOKEN = '@'
+    PAD_TOKEN = '^'
 
     def __init__(self, chars):
         self.chars = [self.PAD_TOKEN, self.START_TOKEN] + list(sorted(set(chars)))
@@ -22,7 +71,7 @@ class CharacterTable:
         ]
 
     def to_ids_padded(self, css, maxlen=None):
-        return tf.keras.preprocessing.sequence.pad_sequences(self.to_ids(css), maxlen=400, dtype='int32',
+        return tf.keras.preprocessing.sequence.pad_sequences(self.to_ids(css), maxlen=CharacterTable.maxlen, dtype='int32',
                                                              padding='post', truncating='post',
                                                              value=self.char_indices[self.PAD_TOKEN])
 
@@ -42,7 +91,6 @@ def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
-@dataclass
 class Data:
     input_texts: np.ndarray = None
     dagesh_texts: np.ndarray = None
@@ -62,42 +110,34 @@ class Data:
     sin_size: int = None
     niqqud_size: int = None
 
-    def merge(self, texts, ds, ss, ns):
-
-        # for cs in css:
-        #     del cs[cs.index(self.char_indices[self.PAD_TOKEN]):]
-        #     del cs[0]
-        # texts = from_categorical(q)
-        dageshs = from_categorical(ds)
-        sins = from_categorical(ss)
-        niqquds = from_categorical(ns)
+    def merge(self, ts, ds=None, ss=None, ns=None):
+        default = [['_'] * len(ts[0]) for x in range(len(ts))]
+        texts = [[self.letters_table.indices_char[x] for x in line] for line in ts]
+        dageshs = [[self.dagesh_table.indices_char[x] for x in xs] for xs in from_categorical(ds)] if ds is not None else default
+        sins = [[self.sin_table.indices_char[x] for x in xs] for xs in from_categorical(ss)] if ss is not None else default
+        niqquds = [[self.niqqud_table.indices_char[x] for x in xs] for xs in from_categorical(ns)] if ns is not None else default
         assert len(texts) == len(niqquds)
         res = []
         for i in range(len(texts)):
             sentence = []
-            for ci, di, si, ni in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
-                if ci == self.letters_table.char_indices[self.letters_table.START_TOKEN]:
+            for c, d, s, n in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
+                if c == self.letters_table.START_TOKEN:
                     continue
-                if ci == self.letters_table.char_indices[self.letters_table.PAD_TOKEN]:
+                if c == self.letters_table.PAD_TOKEN:
                     break
-                sentence.append(self.letters_table.indices_char[ci])
+                sentence.append(c)
 
-                d = self.dagesh_table.indices_char[di]
                 if d != '_':
                     sentence.append('\u05bc')
-
-                s = self.sin_table.indices_char[si]
                 if s != '_':
                     sentence.append(s)
-
-                n = self.niqqud_table.indices_char[ni]
                 if n != '_':
                     sentence.append(n)
             res.append(''.join(sentence))
         return res
 
 
-def load_file(batch_size, validation, filenames) -> Data:
+def load_file(batch_size, validation, filenames, maxlen=100) -> Data:
     data = Data()
     input_texts = []
     dagesh_texts = []
@@ -105,11 +145,12 @@ def load_file(batch_size, validation, filenames) -> Data:
     niqqud_texts = []
     for filename in filenames:
         with open(filename, encoding='utf-8') as f:
-            part_input_texts, part_dagesh_texts, part_sin_texts, part_niqqud_texts = scrape_bible.unzip_dotted_lines(f)
+            part_input_texts, part_dagesh_texts, part_sin_texts, part_niqqud_texts = unzip_dotted_lines(f, maxlen=maxlen)
         input_texts.extend(part_input_texts)
         dagesh_texts.extend(part_dagesh_texts)
         sin_texts.extend(part_sin_texts)
         niqqud_texts.extend(part_niqqud_texts)
+    CharacterTable.maxlen=maxlen
     data.letters_table = CharacterTable(''.join(x for xs in input_texts for x in xs))
     data.dagesh_table = CharacterTable(''.join(x for xs in dagesh_texts for x in xs))
     data.sin_table = CharacterTable(''.join(x for xs in sin_texts for x in xs))
