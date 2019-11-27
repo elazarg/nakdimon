@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow.keras.layers as layers
 from tensorflow.keras.utils import plot_model
 import numpy as np
 import dataset
@@ -20,8 +21,8 @@ data = dataset.load_file(BATCH_SIZE, 0.05,
 
 EMBED_DIM = 128
 F = 4
-inp = tf.keras.Input(shape=(data.maxlen,), batch_size=BATCH_SIZE)
-h = layers.Embedding(data.letters_size, EMBED_DIM, mask_zero=True)(inp)
+inp = tf.keras.Input(shape=(data.input_texts.shape[1],), batch_size=BATCH_SIZE)
+h = layers.Embedding(len(data.letters_table), EMBED_DIM, mask_zero=True)(inp)
 # h = layers.Bidirectional(layers.GRU(EMBED_DIM*FACTOR, return_sequences=True), merge_mode='sum')(h)
 h = layers.Bidirectional(layers.GRU(EMBED_DIM*F, return_sequences=True), merge_mode='sum')(h)
 # h1 = layers.Bidirectional(layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
@@ -37,9 +38,9 @@ h = layers.Dropout(0.1)(h)
 # h_sin = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
 # h = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
 
-# output_dagesh = layers.Dense(data.dagesh_size, name='Dagesh')(h)
-# output_sin = layers.Dense(data.sin_size, name='Sin')(h)
-h = layers.Dense(data.niqqud_size, name='Niqqud')(h)
+# output_dagesh = layers.Dense(len(data.dagesh_table), name='Dagesh')(h)
+# output_sin = layers.Dense(len(data.sin_table), name='Sin')(h)
+h = tf.keras.layers.Dense(len(data.niqqud_table), name='Niqqud')(h)
 # h = layers.Dropout(0.1)(h)
 # model_dagesh = tf.keras.Model(inputs=[inp], outputs=[output_dagesh])
 # model_sin = tf.keras.Model(inputs=[inp], outputs=[output_sin])
