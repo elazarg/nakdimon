@@ -67,14 +67,23 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         letter = text[i]
         i += 1
         if is_hebrew_letter(letter):
-            while i < n and is_niqqud(text[i]) or text[i] in NIQQUD_SIN:
-                if text[i] == DAGESH and (letter != HebrewCharacter.VAV or is_niqqud(text[i + 1])):
-                    dagesh = text[i]
+            maybe_dagesh = False
+            while i < n and (is_niqqud(text[i]) or text[i] == DAGESH or text[i] in NIQQUD_SIN):
+                if text[i] == DAGESH:
+                    if letter == 'ו':
+                        maybe_dagesh = True
+                    else:
+                        dagesh = text[i]
                 elif text[i] in NIQQUD_SIN:
                     sin = text[i]
                 else:
                     niqqud = text[i]
                 i += 1
+            if maybe_dagesh:
+                if niqqud:
+                    dagesh = DAGESH
+                else:
+                    niqqud = DAGESH
         yield HebrewItem(letter, dagesh, sin, niqqud)
 
 
