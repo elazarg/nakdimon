@@ -15,7 +15,7 @@ class HebrewItem(NamedTuple):
     letter: str
     dagesh: str
     sin: str
-    niqqued: str
+    niqqud: str
 
 
 class HebrewCharacter(Enum):
@@ -67,36 +67,15 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         letter = text[i]
         i += 1
         if is_hebrew_letter(letter):
-            if text[i] == DAGESH and (letter != HebrewCharacter.VAV or is_niqqud(text[i + 1])):
-                dagesh = text[i]
+            while i < n and is_niqqud(text[i]) or text[i] in NIQQUD_SIN:
+                if text[i] == DAGESH and (letter != HebrewCharacter.VAV or is_niqqud(text[i + 1])):
+                    dagesh = text[i]
+                elif text[i] in NIQQUD_SIN:
+                    sin = text[i]
+                else:
+                    niqqud = text[i]
                 i += 1
-            if text[i] in NIQQUD_SIN:
-                sin = text[i]
-                i += 1
-            if is_niqqud(text[i]):
-                niqqud = text[i]
-                i += 1
-        yield HebrewItem(letter, sin, dagesh, niqqud)
-
-
-def unzip_dotted_text(text: str):
-    return zip(*iterate_dotted_text(text))
-
-
-def unzip_dotted_lines(lines: Iterable[str], maxlen: int):
-    ws, xs, ys, zs = [], [], [], []
-    for line in lines:
-        w, x, y, z = zip(*iterate_dotted_text(line))
-
-        line = ''.join(w)
-        n = line[:maxlen].rfind(' ')
-        if n <= 0 or len(line) < maxlen:
-            continue
-        ws.append(w[:n])
-        xs.append(x[:n])
-        ys.append(y[:n])
-        zs.append(z[:n])
-    return ws, xs, ys, zs
+        yield HebrewItem(letter, dagesh, sin, niqqud)
 
 
 def hebrew_items_to_str(items: Iterable[HebrewItem]) -> str:
@@ -104,11 +83,13 @@ def hebrew_items_to_str(items: Iterable[HebrewItem]) -> str:
 
 
 def split_by_length(heb_items, maxlen):
-    assert maxlen > 0
+    assert maxlen > 1
+
+    maxlen -= 1
 
     start = 0
-    while heb_items:
-        if len(heb_items) - start < maxlen:
+    while start < len(heb_items):
+        if len(heb_items) <= start + maxlen:
             yield heb_items[start:]
             break
         ub = maxlen
@@ -118,10 +99,3 @@ def split_by_length(heb_items, maxlen):
             ub = maxlen
         yield heb_items[start:start + ub]
         start += ub + 1
-
-
-def read_file_splitted_by_length(fname, maxlen):
-    with open(fname, encoding='utf8') as f:
-        text = ' '.join(f.read().split())
-
-    yield from split_by_length(text, maxlen)

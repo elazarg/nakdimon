@@ -1,5 +1,6 @@
 import re
 import os
+import hebrew
 
 REMOVE_KRI_KTIV = True
 
@@ -38,61 +39,6 @@ def html_to_text(filename):
                 yield text + '\n'
 
 
-def is_text(c):
-    return '\u05d0' <= c <= '\u05ea'
-
-
-def is_niqqud(c):
-    return '\u0591' <= c <= '\u05c7'
-
-
-def iterate_dotted_text(line):
-    n = len(line)
-    line += '  '
-    i = 0
-    while i < n:
-        dagesh = '_'
-        niqqud = '_'
-        sin = '_'
-        c = line[i]
-        i += 1
-        if is_text(c):
-            if line[i] == '\u05bc' and (c != 'ו' or is_niqqud(line[i+1])):
-                dagesh = line[i]
-                i += 1
-            if line[i] in '\u05c1\u05c2':
-                sin = line[i]
-                i += 1
-            if is_niqqud(line[i]):
-                niqqud = line[i]
-                i += 1
-        yield (c, sin, dagesh, niqqud)
-
-
-def unzip_dotted_text(line):
-    return zip(*iterate_dotted_text(line))
-
-
-def unzip_dotted_lines(lines):
-    ws, xs, ys, zs = [], [], [], []
-    for line in lines:
-        w, x, y, z = zip(*iterate_dotted_text(line.strip()))
-        ws.append(w)
-        xs.append(x)
-        ys.append(y)
-        zs.append(z)
-    return ws, xs, ys, zs
-
-
-def merge(chars, niqqud):
-    sentence = []
-    for c, n in zip(chars, niqqud):
-        sentence.append(c)
-        if n != '_':
-            sentence.append(n)
-    return ''.join(sentence)
-
-
 def run_all():
     chars = set()
     with open('bible_text/bible.txt', 'w', encoding='utf-8') as bible:
@@ -101,9 +47,7 @@ def run_all():
                 if len(fname) > 7:  # only tXX.htm, not tXXYY.htm
                     continue
                 text = ''.join(html_to_text('bible_html/' + fname))
-                w, x, y, z = unzip_dotted_text(text)
                 print(fname, ':')
-                print(merge(w, z))
                 undotted_text = re.sub(r'[\u0591-\u05c7]', '', text)
                 with open('bible_text/' + fname[:-4] + '.txt', 'w', encoding='utf-8') as f:
                     f.write(text)

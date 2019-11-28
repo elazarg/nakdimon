@@ -79,8 +79,9 @@ def load_file(batch_size, validation_rate, filenames, maxlen=100, shuffle=True) 
     if shuffle:
         np.random.shuffle(splitted_lines)
 
-    input_texts, sin_texts, dagesh_texts, niqqud_texts = zip(*(zip(*line) for line in splitted_lines))
-
+    input_texts, dagesh_texts, sin_texts, niqqud_texts = zip(*(zip(*line) for line in splitted_lines))
+    for x in input_texts:
+        assert len(x) <= maxlen, len(x)
     data = Data()
 
     data.letters_table = CharacterTable(hebrew.HEBREW_LETTERS + ''.join(x for xs in input_texts for x in xs))
