@@ -23,9 +23,7 @@ EMBED_DIM = 128
 F = 4
 inp = tf.keras.Input(shape=(data.input_texts.shape[1],), batch_size=BATCH_SIZE)
 h = layers.Embedding(len(data.letters_table), EMBED_DIM, mask_zero=True)(inp)
-# h = layers.Bidirectional(layers.GRU(EMBED_DIM*FACTOR, return_sequences=True), merge_mode='sum')(h)
 h = layers.Bidirectional(layers.GRU(EMBED_DIM*F, return_sequences=True), merge_mode='sum')(h)
-# h1 = layers.Bidirectional(layers.GRU(EMBED_DIM*4, return_sequences=True), merge_mode='sum')(h)
 # h = layers.Add()([h, h1])
 for k in range(3):
     h = layers.Dropout(0.1)(h)
@@ -33,25 +31,14 @@ for k in range(3):
     h = layers.Add()([h, h1])
     
 h = layers.Dropout(0.1)(h)
-# h = layers.Conv1D(32, 2, activation='relu')(h)
-# h_dagesh = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
-# h_sin = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
-# h = layers.Dense(EMBED_DIM*FACTOR, activation='relu')(h)
 
 # output_dagesh = layers.Dense(len(data.dagesh_table), name='Dagesh')(h)
 # output_sin = layers.Dense(len(data.sin_table), name='Sin')(h)
 h = tf.keras.layers.Dense(len(data.niqqud_table), name='Niqqud')(h)
-# h = layers.Dropout(0.1)(h)
-# model_dagesh = tf.keras.Model(inputs=[inp], outputs=[output_dagesh])
-# model_sin = tf.keras.Model(inputs=[inp], outputs=[output_sin])
 model_niqqud = tf.keras.Model(inputs=[inp], outputs=[h])
-# model = tf.keras.Model(inputs=[inp], outputs=[output_dagesh, output_sin, output_niqqud])
 
-# lr=0.003
 adam = tf.keras.optimizers.Adam(learning_rate=0.003, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
-# model_dagesh.compile(loss='mean_squared_logarithmic_error', optimizer='adam', metrics=['accuracy'])
-# model_sin.compile(loss='mean_squared_logarithmic_error', optimizer='adam', metrics=['accuracy'])
 model_niqqud.compile(loss='mean_squared_logarithmic_error', optimizer=adam, metrics=['accuracy'])
 
 plot_model(model_niqqud, to_file='model.png')
