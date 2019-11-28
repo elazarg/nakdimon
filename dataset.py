@@ -48,7 +48,6 @@ class Data:
     def merge(self, ts, ds=None, ss=None, ns=None):
         default = [[''] * len(ts[0]) for x in range(len(ts))]
         texts = [[self.letters_table.indices_char[x] for x in line] for line in ts]
-        print(from_categorical(ds))
         dageshs = [[self.dagesh_table.indices_char[x] for x in xs] for xs in from_categorical(ds)] if ds is not None else default
         sins = [[self.sin_table.indices_char[x] for x in xs] for xs in from_categorical(ss)] if ss is not None else default
         niqquds = [[self.niqqud_table.indices_char[x] for x in xs] for xs in from_categorical(ns)] if ns is not None else default
