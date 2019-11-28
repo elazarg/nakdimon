@@ -4,9 +4,12 @@ from enum import Enum
 
 HEBREW_LETTERS = ''.join(chr(c) for c in range(0x05d0, 0x05ea + 1))
 
-NIQQUD = tuple(chr(c) for c in range(0x0591, 0x05c7 + 1))
+NIQQUD = tuple(chr(c) for c in range(0x05b0, 0x05bc + 1)) + ('\u05b7',)
+# print(''.join(x for s in zip('א' * len(NIQQUD), NIQQUD) for x in s))
 
-NIQQUD_SIN = ('\u05c1', '\u05c2')
+SHIN_YEMANIT = '\u05c1'
+SHIN_SMALIT = '\u05c2'
+NIQQUD_SIN = (SHIN_YEMANIT, SHIN_SMALIT)
 
 DAGESH = '\u05bc'  # note that DAGESH and SHURUK are one and the same
 
@@ -53,7 +56,7 @@ def is_hebrew_letter(letter: str) -> bool:
 
 
 def is_niqqud(letter: str) -> bool:
-    return '\u0591' <= letter <= '\u05c7'
+    return letter in list(NIQQUD)
 
 
 def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
@@ -76,7 +79,11 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                         dagesh = text[i]
                 elif text[i] in NIQQUD_SIN:
                     sin = text[i]
+                elif text[i] == '\u05b9' and niqqud:  # fix HOLAM where there should be a SIN:
+                    sin = SHIN_SMALIT
                 else:
+                    if niqqud == '\u05b9':  # fix HOLAM where there should be a SIN:
+                        sin = SHIN_SMALIT
                     niqqud = text[i]
                 i += 1
             if maybe_dagesh:
