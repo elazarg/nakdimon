@@ -48,9 +48,9 @@ class Data:
     def merge(self, ts, ds=None, ss=None, ns=None):
         default = [[''] * len(ts[0]) for x in range(len(ts))]
         texts = [[self.letters_table.indices_char[x] for x in line] for line in ts]
-        dageshs = [[self.dagesh_table.indices_char[x] for x in xs] for xs in from_categorical(ds)] if ds is not None else default
-        sins = [[self.sin_table.indices_char[x] for x in xs] for xs in from_categorical(ss)] if ss is not None else default
-        niqquds = [[self.niqqud_table.indices_char[x] for x in xs] for xs in from_categorical(ns)] if ns is not None else default
+        dageshs = [[self.dagesh_table.indices_char[x] for x in xs] for xs in ds] if ds is not None else default
+        sins = [[self.sin_table.indices_char[x] for x in xs] for xs in ss] if ss is not None else default
+        niqquds = [[self.niqqud_table.indices_char[x] for x in xs] for xs in ns] if ns is not None else default
         assert len(texts) == len(niqquds)
         res = []
         for i in range(len(texts)):
@@ -97,9 +97,9 @@ def load_file(batch_size, validation_rate, filenames, maxlen=100, shuffle=True) 
 
     input_texts = pad(data.letters_table, input_texts)
 
-    dagesh_texts = tf.keras.utils.to_categorical(pad(data.dagesh_table, dagesh_texts))
-    sin_texts = tf.keras.utils.to_categorical(pad(data.sin_table, sin_texts))
-    niqqud_texts = tf.keras.utils.to_categorical(pad(data.niqqud_table, niqqud_texts))
+    dagesh_texts = pad(data.dagesh_table, dagesh_texts)
+    sin_texts = pad(data.sin_table, sin_texts)
+    niqqud_texts = pad(data.niqqud_table, niqqud_texts)
 
     data.letters_size = len(data.letters_table)
 
