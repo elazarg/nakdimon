@@ -1,0 +1,25 @@
+<!doctype html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body dir="rtl">
+  <div class='tfjs-example-container centered-container'>
+    <section class='title-area'>
+      <h1>נקדן</h1>
+      <p class='subtitle'>ניקוד אוטומטי</p>
+    </section>
+    <label for="text">הכנס טקסט לניקוד</label>
+    <div class="setting">
+        <textarea id="undotted_text" rows="10" cols="60" style="font-size: 20px;">בישראל אחוז התמותה נמוך באופן משמעותי.</textarea>
+        <textarea id="dotted_text" readonly rows="10" cols="50" style="font-size: 20px;"></textarea>
+    </div>
+    <div>
+        <button id="perform_dot">נקד</button>
+    </div>
+  </div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.6.0"></script>
+<script src="dotter.js"></script>

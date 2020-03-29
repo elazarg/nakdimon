@@ -66,6 +66,12 @@ class Data:
                 sentence.append(n)
             res.append(''.join(sentence))
         return res
+    
+    def print_tables(self):
+        print(self.letters_table.chars)
+        print(self.niqqud_table.chars)
+        print(self.dagesh_table.chars)
+        print(self.sin_table.chars)
 
 
 def load_file(batch_size, validation_rate, filenames, maxlen=100, shuffle=True) -> Data:
