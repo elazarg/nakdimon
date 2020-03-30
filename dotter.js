@@ -1,17 +1,41 @@
-const letters_array = ['^', '@', '', ' ', '!', '"', "'", '(', ')', '*', ',', '-', '.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '?', 'D', 'O', 'R', '[', ']', '´', 'ְ', 'ַ', 'ֹ', '־', 'ׁ', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף', 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת', 'ײ', '״', '–', '—', '‘', '’', '“', '”', '…', '−'];
 const niqqud_array = ['^', '@', '', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ'];
 const dagesh_array = ['^', '@', '', 'ּ'];
 const sin = ['^', '@', '', 'ׁ', 'ׂ'];
 
+const VALID_LETTERS = ['', ' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
+                      'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
+                      'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
+const SPECIAL_TOKENS = ['^', '@', 'H', 'O', '5'];
+const ALL_TOKENS =['^', '@', '', '', ' ', '!', '"', "'", '(', ')', ',', '-', '.', '5', ':', ';', '?', '@', 'H', 'O', '^', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף', 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
+console.log(ALL_TOKENS);
+const BATCH_SIZE = 32;
+const MAXLEN = 60;
+
+function normalize(c) {
+    if (VALID_LETTERS.includes(c)) return c;
+    if (c === '\n' || c === '\t') return ' ';
+    if (['־', '‒', '–', '—', '―', '−'].includes(c)) return '-';
+    if (c === '[') return '(';
+    if (c === ']') return ')';
+    if (['´', '‘', '’'].includes(c)) return "'";
+    if (['“', '”', '״'].includes(c)) return '"';
+    if (c.isdigit()) return '5';
+    if (c === '…') return ',';
+    if (['ײ', 'װ', 'ױ'].includes(c)) return 'H';
+    return 'O';
+}
+
 function from_categorical(arr, len) {
-    return arr.argMax(-1).reshape([1, 32*60]).arraySync()[0].slice(1, len);
+    return arr.argMax(-1).reshape([1, BATCH_SIZE*MAXLEN]).arraySync()[0].slice(1, len);
 }
 
 function text_to_input(text) {
-    text = text.replace(/\s/, ' ');
+    console.log(text.length);
+    text = text.replace(/./, normalize);
+    console.log(text.length);
     text = Array.from(text);
-    const ords = text.map(v=>letters_array.indexOf(v));
-    const input = tf.tensor1d(ords).pad([[1, 32*60 - text.length - 1]]).reshape([32, 60]);
+    const ords = text.map(v=>ALL_TOKENS.indexOf(v));
+    const input = tf.tensor1d(ords).pad([[1, BATCH_SIZE*MAXLEN - text.length - 1]]).reshape([BATCH_SIZE, MAXLEN]);
     return input;
 }
 

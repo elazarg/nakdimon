@@ -26,6 +26,7 @@ class CharacterTable:
 
 
 letters_table = CharacterTable(hebrew.VALID_LETTERS + hebrew.SPECIAL_TOKENS)
+print(letters_table.chars)
 dagesh_table = CharacterTable(hebrew.DAGESH)
 sin_table = CharacterTable(hebrew.NIQQUD_SIN)
 niqqud_table = CharacterTable(hebrew.NIQQUD)
@@ -114,11 +115,11 @@ def load_file(filenames, batch_size, validation_rate, maxlen=100, shuffle=True) 
     return data
 
 
-if __name__ == '__main__':
-    rabanit = ['birkat_hamazon.txt', 'hakdama_leorot.txt', 'hartzaat_harav.txt', 'orhot_hayim.txt',
-               'rambam_mamre.txt', 'short_table.txt', 'tomer_dvora.txt', 'breslev.txt']
-    modern = ['atar_hashabat.txt', 'kakun.txt', 'sisters.txt', 'treasure_island.txt', 'ali_baba.txt', 'people.txt',
-              'ricky.txt', 'imagination.txt', 'adamtsair.txt', 'katarsis.txt']
-    filenames = ['texts/' + f for f in modern + rabanit]
-    data = load_file(filenames, 32, 0.01, maxlen=60, shuffle=True)
-    print(data.normalized_texts[0])
+# if __name__ == '__main__':
+#     rabanit = ['birkat_hamazon.txt', 'hakdama_leorot.txt', 'hartzaat_harav.txt', 'orhot_hayim.txt',
+#                'rambam_mamre.txt', 'short_table.txt', 'tomer_dvora.txt', 'breslev.txt']
+#     modern = ['atar_hashabat.txt', 'kakun.txt', 'sisters.txt', 'treasure_island.txt', 'ali_baba.txt', 'people.txt',
+#               'ricky.txt', 'imagination.txt', 'adamtsair.txt', 'katarsis.txt']
+#     filenames = ['texts/' + f for f in modern + rabanit]
+#     data = load_file(filenames, 32, 0.01, maxlen=60, shuffle=True)
+#     print(data.normalized_texts[0])
