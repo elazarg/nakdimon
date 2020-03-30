@@ -7,7 +7,6 @@ const VALID_LETTERS = ['', ' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';'
                       'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
 const SPECIAL_TOKENS = ['^', '@', 'H', 'O', '5'];
 const ALL_TOKENS =['^', '@', '', '', ' ', '!', '"', "'", '(', ')', ',', '-', '.', '5', ':', ';', '?', '@', 'H', 'O', '^', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף', 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
-console.log(ALL_TOKENS);
 const BATCH_SIZE = 32;
 const MAXLEN = 60;
 
@@ -30,9 +29,7 @@ function from_categorical(arr, len) {
 }
 
 function text_to_input(text) {
-    console.log(text.length);
     text = text.replace(/./, normalize);
-    console.log(text.length);
     text = Array.from(text);
     const ords = text.map(v=>ALL_TOKENS.indexOf(v));
     const input = tf.tensor1d(ords).pad([[1, BATCH_SIZE*MAXLEN - text.length - 1]]).reshape([BATCH_SIZE, MAXLEN]);
