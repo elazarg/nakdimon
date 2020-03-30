@@ -1,4 +1,4 @@
-import tensorflow as tf
+from keras import preprocessing
 import numpy as np
 
 import hebrew
@@ -25,40 +25,50 @@ class CharacterTable:
         return repr(self.chars)
 
 
+letters_table = CharacterTable(hebrew.VALID_LETTERS + hebrew.SPECIAL_TOKENS)
+dagesh_table = CharacterTable(hebrew.DAGESH)
+sin_table = CharacterTable(hebrew.NIQQUD_SIN)
+niqqud_table = CharacterTable(hebrew.NIQQUD)
+
+
+def print_tables():
+    print(letters_table.chars)
+    print(niqqud_table.chars)
+    print(dagesh_table.chars)
+    print(sin_table.chars)
+
+    
 def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
 class Data:
     input_texts: np.ndarray = None
+
+    normalized_texts: np.ndarray = None
     dagesh_texts: np.ndarray = None
     sin_texts: np.ndarray = None
     niqqud_texts: np.ndarray = None
 
-    input_validation: np.ndarray = None
+    normalized_validation: np.ndarray = None
     dagesh_validation: np.ndarray = None
     sin_validation: np.ndarray = None
     niqqud_validation: np.ndarray = None
 
-    letters_table: CharacterTable = None
-    dagesh_table: CharacterTable = None
-    sin_table: CharacterTable = None
-    niqqud_table: CharacterTable = None
-
     def merge(self, ts, ds=None, ss=None, ns=None):
         default = [[''] * len(ts[0]) for x in range(len(ts))]
-        texts = [[self.letters_table.indices_char[x] for x in line] for line in ts]
-        dageshs = [[self.dagesh_table.indices_char[x] for x in xs] for xs in ds] if ds is not None else default
-        sins = [[self.sin_table.indices_char[x] for x in xs] for xs in ss] if ss is not None else default
-        niqquds = [[self.niqqud_table.indices_char[x] for x in xs] for xs in ns] if ns is not None else default
+        texts = [[letters_table.indices_char[x] for x in line] for line in ts]
+        dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds] if ds is not None else default
+        sins = [[sin_table.indices_char[x] for x in xs] for xs in ss] if ss is not None else default
+        niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns] if ns is not None else default
         assert len(texts) == len(niqquds)
         res = []
         for i in range(len(texts)):
             sentence = []
             for c, d, s, n in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
-                if c == self.letters_table.START_TOKEN:
+                if c == letters_table.START_TOKEN:
                     continue
-                if c == self.letters_table.PAD_TOKEN:
+                if c == letters_table.PAD_TOKEN:
                     break
                 sentence.append(c)
                 sentence.append(d)
@@ -66,15 +76,9 @@ class Data:
                 sentence.append(n)
             res.append(''.join(sentence))
         return res
-    
-    def print_tables(self):
-        print(self.letters_table.chars)
-        print(self.niqqud_table.chars)
-        print(self.dagesh_table.chars)
-        print(self.sin_table.chars)
 
 
-def load_file(batch_size, validation_rate, filenames, maxlen=100, shuffle=True) -> Data:
+def load_file(filenames, batch_size, validation_rate, maxlen=100, shuffle=True) -> Data:
     heb_items = []
     for filename in filenames:
         with open(filename, encoding='utf-8') as f:
@@ -86,32 +90,35 @@ def load_file(batch_size, validation_rate, filenames, maxlen=100, shuffle=True) 
         np.random.shuffle(splitted_lines)
 
     input_texts, dagesh_texts, sin_texts, niqqud_texts = zip(*(zip(*line) for line in splitted_lines))
-    for x in input_texts:
-        assert len(x) <= maxlen, len(x)
-    data = Data()
-
-    data.letters_table = CharacterTable(hebrew.HEBREW_LETTERS + ''.join(x for xs in input_texts for x in xs))
-    data.dagesh_table = CharacterTable(hebrew.DAGESH)
-    data.sin_table = CharacterTable(hebrew.NIQQUD_SIN)
-    data.niqqud_table = CharacterTable(hebrew.NIQQUD)
 
     m = len(input_texts) // batch_size * batch_size
 
     def pad(table, css):
-        return tf.keras.preprocessing.sequence.pad_sequences(table.to_ids(css[:m]), maxlen=maxlen,
-                                                             dtype='int32', padding='post', truncating='post', value=0)
+        return preprocessing.sequence.pad_sequences(table.to_ids(css[:m]), maxlen=maxlen,
+                                                    dtype='int32', padding='post', truncating='post', value=0)
 
-    input_texts = pad(data.letters_table, input_texts)
+    data = Data()
+    data.input_texts = input_texts
 
-    dagesh_texts = pad(data.dagesh_table, dagesh_texts)
-    sin_texts = pad(data.sin_table, sin_texts)
-    niqqud_texts = pad(data.niqqud_table, niqqud_texts)
+    normalized_texts = pad(letters_table, input_texts)
 
-    data.letters_size = len(data.letters_table)
+    dagesh_texts = pad(dagesh_table, dagesh_texts)
+    sin_texts = pad(sin_table, sin_texts)
+    niqqud_texts = pad(niqqud_table, niqqud_texts)
 
     v = int(m*(1-validation_rate))
-    data.input_texts, data.input_validation = input_texts[:v], input_texts[v:]
+    data.normalized_texts, data.normalized_validation = normalized_texts[:v], normalized_texts[v:]
     data.dagesh_texts, data.dagesh_validation = dagesh_texts[:v], dagesh_texts[v:]
     data.sin_texts, data.sin_validation = sin_texts[:v], sin_texts[v:]
     data.niqqud_texts, data.niqqud_validation = niqqud_texts[:v], niqqud_texts[v:]
     return data
+
+
+if __name__ == '__main__':
+    rabanit = ['birkat_hamazon.txt', 'hakdama_leorot.txt', 'hartzaat_harav.txt', 'orhot_hayim.txt',
+               'rambam_mamre.txt', 'short_table.txt', 'tomer_dvora.txt', 'breslev.txt']
+    modern = ['atar_hashabat.txt', 'kakun.txt', 'sisters.txt', 'treasure_island.txt', 'ali_baba.txt', 'people.txt',
+              'ricky.txt', 'imagination.txt', 'adamtsair.txt', 'katarsis.txt']
+    filenames = ['texts/' + f for f in modern + rabanit]
+    data = load_file(filenames, 32, 0.01, maxlen=60, shuffle=True)
+    print(data.normalized_texts[0])

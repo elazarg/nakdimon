@@ -13,6 +13,25 @@ NIQQUD_SIN = (SHIN_YEMANIT, SHIN_SMALIT)
 
 DAGESH = '\u05bc'  # note that DAGESH and SHURUK are one and the same
 
+VALID_LETTERS = ['', ' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
+                 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
+                 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת']
+SPECIAL_TOKENS = ['^', '@', 'H', 'O', '5']
+
+
+def normalize(c):
+    if c in VALID_LETTERS: return c
+    if c in ['\n', '\t']: return ' '
+    if c in ['־', '‒', '–', '—', '―', '−']: return '-'
+    if c == '[': return '('
+    if c == ']': return ')'
+    if c in ['´', '‘', '’']: return "'"
+    if c in ['“', '”', '״']: return '"'
+    if c.isdigit(): return '5'
+    if c == '…': return ','
+    if c in ['ײ', 'װ', 'ױ']: return 'H'
+    return 'O'
+
 
 class HebrewItem(NamedTuple):
     letter: str
@@ -67,7 +86,7 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         dagesh = ''
         niqqud = ''
         sin = ''
-        letter = text[i]
+        letter = normalize(text[i])
         i += 1
         if is_hebrew_letter(letter):
             maybe_dagesh = False
