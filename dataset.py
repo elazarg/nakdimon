@@ -26,7 +26,6 @@ class CharacterTable:
 
 
 letters_table = CharacterTable(hebrew.SPECIAL_TOKENS + hebrew.VALID_LETTERS)
-print(letters_table.chars)
 dagesh_table = CharacterTable(hebrew.DAGESH)
 sin_table = CharacterTable(hebrew.NIQQUD_SIN)
 niqqud_table = CharacterTable(hebrew.NIQQUD)
