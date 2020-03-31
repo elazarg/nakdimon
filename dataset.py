@@ -5,11 +5,11 @@ import hebrew
 
 
 class CharacterTable:
-    START_TOKEN = '@'
-    PAD_TOKEN = '^'
+    PAD_TOKEN = ''
 
     def __init__(self, chars):
-        self.chars = [self.PAD_TOKEN, self.START_TOKEN, ''] + list(sorted(set(chars)))
+        # make sure to be consistent with JS
+        self.chars = [self.PAD_TOKEN] + chars
         self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
@@ -18,14 +18,14 @@ class CharacterTable:
 
     def to_ids(self, css):
         return [
-            [self.char_indices[self.START_TOKEN]] + [self.char_indices[c] for c in cs] for cs in css
+            [self.char_indices[c] for c in cs] for cs in css
         ]
 
     def __repr__(self):
         return repr(self.chars)
 
 
-letters_table = CharacterTable(hebrew.VALID_LETTERS + hebrew.SPECIAL_TOKENS)
+letters_table = CharacterTable(hebrew.SPECIAL_TOKENS + hebrew.VALID_LETTERS)
 print(letters_table.chars)
 dagesh_table = CharacterTable(hebrew.DAGESH)
 sin_table = CharacterTable(hebrew.NIQQUD_SIN)
@@ -67,8 +67,6 @@ class Data:
         for i in range(len(texts)):
             sentence = []
             for c, d, s, n in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
-                if c == letters_table.START_TOKEN:
-                    continue
                 if c == letters_table.PAD_TOKEN:
                     break
                 sentence.append(c)

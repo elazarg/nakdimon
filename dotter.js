@@ -1,14 +1,14 @@
-const niqqud_array = ['^', '@', '', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ'];
-const dagesh_array = ['^', '@', '', 'ּ'];
-const sin = ['^', '@', '', 'ׁ', 'ׂ'];
+const niqqud_array = ['', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ', 'ַ'];
+const dagesh_array = ['', 'ּ'];
+const sin = ['', 'ׁ', 'ׂ'];
 
-const VALID_LETTERS = ['', ' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
+const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
                       'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
                       'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
-const SPECIAL_TOKENS = ['^', '@', 'H', 'O', '5'];
-const ALL_TOKENS =['^', '@', '', '', ' ', '!', '"', "'", '(', ')', ',', '-', '.', '5', ':', ';', '?', '@', 'H', 'O', '^', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף', 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
+const SPECIAL_TOKENS = ['H', 'O', '5'];
+const ALL_TOKENS =[''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
 const BATCH_SIZE = 32;
-const MAXLEN = 60;
+const MAXLEN = 32;
 
 function normalize(c) {
     if (VALID_LETTERS.includes(c)) return c;

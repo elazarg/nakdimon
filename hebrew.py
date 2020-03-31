@@ -2,21 +2,21 @@ from typing import NamedTuple, Iterator, Iterable  # , List, Tuple
 from enum import Enum
 
 
-HEBREW_LETTERS = ''.join(chr(c) for c in range(0x05d0, 0x05ea + 1))
+HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
-NIQQUD = tuple(chr(c) for c in range(0x05b0, 0x05bc + 1)) + ('\u05b7',)
-# print(''.join(x for s in zip('א' * len(NIQQUD), NIQQUD) for x in s))
+NIQQUD = [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']
 
 SHIN_YEMANIT = '\u05c1'
 SHIN_SMALIT = '\u05c2'
-NIQQUD_SIN = (SHIN_YEMANIT, SHIN_SMALIT)
+NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]
 
-DAGESH = '\u05bc'  # note that DAGESH and SHURUK are one and the same
+DAGESH_LETTER = '\u05bc'
+DAGESH = [DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same
 
-VALID_LETTERS = ['', ' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
+VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
                  'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
                  'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת']
-SPECIAL_TOKENS = ['^', '@', 'H', 'O', '5']
+SPECIAL_TOKENS = ['H', 'O', '5']
 
 
 def normalize(c):
@@ -91,25 +91,25 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         if is_hebrew_letter(letter):
             maybe_dagesh = False
             while i < n and (is_niqqud(text[i]) or text[i] == DAGESH or text[i] in NIQQUD_SIN):
-                if text[i] == DAGESH:
+                if text[i] == DAGESH_LETTER:
                     if letter == 'ו':
                         maybe_dagesh = True
                     else:
                         dagesh = text[i]
                 elif text[i] in NIQQUD_SIN:
                     sin = text[i]
-                elif text[i] == '\u05b9' and niqqud:  # fix HOLAM where there should be a SIN:
+                elif text[i] == '\u05b9' and niqqud:  # fix HOLAM where there should be a SIN
                     sin = SHIN_SMALIT
                 else:
-                    if niqqud == '\u05b9':  # fix HOLAM where there should be a SIN:
+                    if niqqud == '\u05b9':  # fix HOLAM where there should be a SIN
                         sin = SHIN_SMALIT
                     niqqud = text[i]
                 i += 1
             if maybe_dagesh:
                 if niqqud:
-                    dagesh = DAGESH
+                    dagesh = DAGESH_LETTER
                 else:
-                    niqqud = DAGESH
+                    niqqud = DAGESH_LETTER
         yield HebrewItem(letter, dagesh, sin, niqqud)
 
 
