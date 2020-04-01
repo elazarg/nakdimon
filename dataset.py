@@ -1,3 +1,4 @@
+import os
 from keras import preprocessing
 import numpy as np
 
@@ -76,10 +77,21 @@ class Data:
         return res
 
 
-def load_file(filenames, batch_size, validation_rate, maxlen=100, shuffle=True) -> Data:
+def iterate_files(base_paths):
+    for name in base_paths:
+        if not os.path.isdir(name):
+            yield name
+            continue
+        for root, dirs, files in os.walk(name):
+            for fname in files:
+                path = os.path.join(root, fname)
+                yield path
+
+
+def load_file(base_paths, batch_size, validation_rate, maxlen=100, shuffle=True) -> Data:
     heb_items = []
-    for filename in filenames:
-        with open(filename, encoding='utf-8') as f:
+    for path in iterate_files(base_paths):
+        with open(path, encoding='utf-8') as f:
             text = ' '.join(f.read().split())
             heb_items.extend(hebrew.iterate_dotted_text(text))
 
@@ -112,11 +124,8 @@ def load_file(filenames, batch_size, validation_rate, maxlen=100, shuffle=True) 
     return data
 
 
-# if __name__ == '__main__':
-#     rabanit = ['birkat_hamazon.txt', 'hakdama_leorot.txt', 'hartzaat_harav.txt', 'orhot_hayim.txt',
-#                'rambam_mamre.txt', 'short_table.txt', 'tomer_dvora.txt', 'breslev.txt']
-#     modern = ['atar_hashabat.txt', 'kakun.txt', 'sisters.txt', 'treasure_island.txt', 'ali_baba.txt', 'people.txt',
-#               'ricky.txt', 'imagination.txt', 'adamtsair.txt', 'katarsis.txt']
-#     filenames = ['texts/' + f for f in modern + rabanit]
-#     data = load_file(filenames, 32, 0.01, maxlen=60, shuffle=True)
-#     print(data.normalized_texts[0])
+if __name__ == '__main__':
+    modern = ['ali_baba.txt', 'uriel_ofek']
+    filenames = [os.path.join('texts', f) for f in modern]
+    data = load_file(filenames, 32, 0.01, maxlen=60, shuffle=True)
+    print(data.normalized_texts[0])

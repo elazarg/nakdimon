@@ -8,7 +8,7 @@ const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?
 const SPECIAL_TOKENS = ['H', 'O', '5'];
 const ALL_TOKENS =[''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
 const BATCH_SIZE = 32;
-const MAXLEN = 32;
+const MAXLEN = 128;
 
 function normalize(c) {
     if (VALID_LETTERS.includes(c)) return c;
