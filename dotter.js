@@ -1,14 +1,14 @@
 const niqqud_array = ['', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ', 'ַ'];
 const dagesh_array = ['', 'ּ'];
-const sin = ['', 'ׁ', 'ׂ'];
+const sin_array = ['', 'ׁ', 'ׂ'];
 
-const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
-                      'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
-                      'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
+const HEBREW_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
+'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
+const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?'].concat(HEBREW_LETTERS);
 const SPECIAL_TOKENS = ['H', 'O', '5'];
 const ALL_TOKENS =[''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
 const BATCH_SIZE = 32;
-const MAXLEN = 128;
+let MAXLEN = 0;
 
 function normalize(c) {
     if (VALID_LETTERS.includes(c)) return c;
@@ -37,16 +37,19 @@ function text_to_input(text) {
 }
 
 function prediction_to_text(model_output, undotted_text) {
-    const [niqqud, dagesh] = model_output;
+    const [niqqud, dagesh, sin] = model_output;
     const len = undotted_text.length;
     const niqqud_result = from_categorical(niqqud, len);
     const dagesh_result = from_categorical(dagesh, len);
+    const sin_result = from_categorical(sin, len);
     let output = '';
     for (let i = 0; i < len; i++) {
-        output += undotted_text[i];
-        if (undotted_text[i] !== '\n') {
+        const c = undotted_text[i];
+        output += c;
+        if (HEBREW_LETTERS.includes(c)) {
             output += niqqud_array[niqqud_result[i]] || '';
             output += dagesh_array[dagesh_result[i]] || '';
+            output += sin_array[sin_result[i]] || '';
         }
     }
     return output;
@@ -54,9 +57,10 @@ function prediction_to_text(model_output, undotted_text) {
 
 async function load_model() {
     const model = await tf.loadLayersModel('model.json');
+    MAXLEN = model.input.shape[1];
     function perform_dot(undotted_text) {
         const input = text_to_input(undotted_text);
-        const prediction = model.predict(input, {batchSize: 32});
+        const prediction = model.predict(input, {batchSize: BATCH_SIZE});
         return prediction_to_text(prediction, undotted_text);
     }
 
