@@ -7,10 +7,11 @@ import hebrew
 
 class CharacterTable:
     PAD_TOKEN = ''
+    HIDDEN_TOKEN = ''
 
     def __init__(self, chars):
         # make sure to be consistent with JS
-        self.chars = [self.PAD_TOKEN] + chars
+        self.chars = [CharacterTable.PAD_TOKEN, CharacterTable.HIDDEN_TOKEN] + chars
         self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
