@@ -1,10 +1,14 @@
-from typing import NamedTuple, Iterator, Iterable  # , List, Tuple
-from enum import Enum
+from collections import defaultdict, Counter
+from typing import NamedTuple, Iterator, Iterable, List, Tuple
 
 
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
+BEGED_KEFET = ['ב', 'ג', 'ד', 'כ', 'פ', 'ת']
+
 NIQQUD = [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']
+
+HOLAM = '\u05b9'
 
 SHIN_YEMANIT = '\u05c1'
 SHIN_SMALIT = '\u05c2'
@@ -39,8 +43,14 @@ class HebrewItem(NamedTuple):
     sin: str
     niqqud: str
 
+    def __str__(self):
+        return self.letter + self.dagesh + self.sin + self.niqqud
 
-class HebrewCharacter(Enum):
+    def __repr__(self):
+        return repr((self.letter, bool(self.dagesh), bool(self.sin), ord(self.niqqud or chr(0))))
+
+
+class HebrewCharacter:
     ALEF = 'א'
     BET = 'ב'
     GIMEL = 'ג'
@@ -98,10 +108,12 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                         dagesh = text[i]
                 elif text[i] in NIQQUD_SIN:
                     sin = text[i]
-                elif text[i] == '\u05b9' and niqqud:  # fix HOLAM where there should be a SIN
+                elif text[i] == HOLAM and niqqud:
+                    # fix HOLAM where there should be a SIN
                     sin = SHIN_SMALIT
                 else:
-                    if niqqud == '\u05b9':  # fix HOLAM where there should be a SIN
+                    if niqqud == HOLAM:
+                        # fix HOLAM where there should be a SIN
                         sin = SHIN_SMALIT
                     niqqud = text[i]
                 i += 1
@@ -111,10 +123,6 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                 else:
                     niqqud = DAGESH_LETTER
         yield HebrewItem(letter, dagesh, sin, niqqud)
-
-
-def hebrew_items_to_str(items: Iterable[HebrewItem]) -> str:
-    return ''.join(x for tup in items for x in tup)
 
 
 def split_by_length(heb_items, maxlen):
@@ -134,3 +142,78 @@ def split_by_length(heb_items, maxlen):
             ub = maxlen
         yield heb_items[start:start + ub]
         start += ub + 1
+
+
+class Token:
+    def __init__(self, items: List[HebrewItem]):
+        self.items = items
+
+    def __str__(self):
+        return ''.join(str(c) for c in self.items)
+
+    def __repr__(self):
+        return 'Token(' + repr(self.items) + ')'
+
+    def strip_nonhebrew(self) -> 'Token':
+        start = 0
+        end = len(self.items) - 1
+        while self.items[start].letter not in HEBREW_LETTERS:
+            start += 1
+            if start >= len(self.items):
+                return Token([])
+        while self.items[end].letter not in HEBREW_LETTERS:
+            end -= 1
+        return Token(self.items[start:end+1])
+
+    def __bool__(self):
+        return bool(self.items)
+
+    def to_undotted(self):
+        return ''.join(str(c.letter) for c in self.items)
+
+    def is_undotted(self):
+        return len(self.items) > 1 and all(c.niqqud == '' for c in self.items)
+
+
+def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem]) -> Iterator[HebrewItem]:
+    current = []
+    for c in char_iterator:
+        if c.letter.isspace() or c.letter == '-':
+            if current:
+                tokens_list.append(Token(current))
+            current = []
+        else:
+            current.append(c)
+        yield c
+    tokens_list.append(Token(current))
+
+
+def iterate_file(path):
+    with open(path, encoding='utf-8') as f:
+        text = ' '.join(f.read().split())
+        yield from iterate_dotted_text(text)
+
+
+def tokenize(iterator: Iterator[HebrewItem]) -> List[Token]:
+    tokens = []
+    _ = list(tokenize_into(tokens, iterator))
+    return tokens
+
+
+def collect_wordmap(tokens: Iterable[Token]):
+    word_dict = defaultdict(Counter)
+    for token in tokens:
+        word_dict[token.to_undotted()][str(token)] += 1
+    return word_dict
+
+
+if __name__ == '__main__':
+    tokens = tokenize(iterate_file('texts/breslev.txt'))
+    stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
+    # word_dict = collect_wordmap(stripped_tokens)
+    # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
+    #     print(k, ':', str(v).replace('Counter', ''))
+    # print(len(word_dict))
+    for t in stripped_tokens:
+        if any(item.letter == 'ש' and not item.sin for item in t.items):
+            print(t)

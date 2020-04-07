@@ -1,12 +1,12 @@
-const niqqud_array = ['', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ', 'ַ'];
-const dagesh_array = ['', 'ּ'];
-const sin_array = ['', 'ׁ', 'ׂ'];
+const niqqud_array = ['', '', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ', 'ַ'];
+const dagesh_array = ['', '', 'ּ'];
+const sin_array = ['', '', 'ׁ', 'ׂ'];
 
 const HEBREW_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
 const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?'].concat(HEBREW_LETTERS);
 const SPECIAL_TOKENS = ['H', 'O', '5'];
-const ALL_TOKENS =[''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
+const ALL_TOKENS =['', ''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
 const BATCH_SIZE = 32;
 let MAXLEN = 0;
 
