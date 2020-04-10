@@ -213,7 +213,7 @@ def collect_wordmap(tokens: Iterable[Token]):
 
 
 if __name__ == '__main__':
-    tokens = tokenize(iterate_file('texts/breslev.txt'))
+    tokens = tokenize(iterate_file('texts/agadot.txt'))
     stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
     # word_dict = collect_wordmap(stripped_tokens)
     # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
