@@ -17,6 +17,8 @@ NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]
 DAGESH_LETTER = '\u05bc'
 DAGESH = [DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same
 
+ANY_NIQQUD = NIQQUD + NIQQUD_SIN + DAGESH
+
 VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
                  'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
                  'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת']
@@ -100,7 +102,7 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         i += 1
         if is_hebrew_letter(letter):
             maybe_dagesh = False
-            while i < n and (is_niqqud(text[i]) or text[i] == DAGESH or text[i] in NIQQUD_SIN):
+            while i < n and text[i] in ANY_NIQQUD:
                 if text[i] == DAGESH_LETTER:
                     if letter == 'ו':
                         maybe_dagesh = True
@@ -122,6 +124,9 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                     dagesh = DAGESH_LETTER
                 else:
                     niqqud = DAGESH_LETTER
+            if letter == 'ש' and not sin and niqqud == HOLAM and i < n and not is_hebrew_letter(text[i]):
+                niqqud = ''
+                sin = SHIN_SMALIT
         yield HebrewItem(letter, dagesh, sin, niqqud)
 
 
