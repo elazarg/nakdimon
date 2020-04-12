@@ -8,7 +8,7 @@ const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?
 const SPECIAL_TOKENS = ['H', 'O', '5'];
 const ALL_TOKENS =['', ''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
 const BATCH_SIZE = 32;
-let MAXLEN = 0;
+let MAXLEN = null;
 
 function normalize(c) {
     if (VALID_LETTERS.includes(c)) return c;
@@ -18,22 +18,20 @@ function normalize(c) {
     if (c === ']') return ')';
     if (['´', '‘', '’'].includes(c)) return "'";
     if (['“', '”', '״'].includes(c)) return '"';
-    if (c.isdigit()) return '5';
+    if ('0123456789'.includes(c)) return '5';
     if (c === '…') return ',';
     if (['ײ', 'װ', 'ױ'].includes(c)) return 'H';
     return 'O';
 }
 
 function from_categorical(arr, len) {
-    return arr.argMax(-1).reshape([1, BATCH_SIZE*MAXLEN]).arraySync()[0].slice(1, len);
+    return arr.argMax(-1).reshape([-1]).arraySync();
 }
 
+
 function text_to_input(text) {
-    text = text.replace(/./, normalize);
-    text = Array.from(text);
-    const ords = text.map(v=>ALL_TOKENS.indexOf(v));
-    const input = tf.tensor1d(ords).pad([[1, BATCH_SIZE*MAXLEN - text.length - 1]]).reshape([BATCH_SIZE, MAXLEN]);
-    return input;
+    const ords = Array.from(text).map(c => ALL_TOKENS.indexOf(normalize(c)));
+    return  tf.tensor1d(ords).pad([[0, BATCH_SIZE*MAXLEN - text.length]]).reshape([BATCH_SIZE, MAXLEN]);
 }
 
 function prediction_to_text(model_output, undotted_text) {
@@ -57,10 +55,12 @@ function prediction_to_text(model_output, undotted_text) {
 
 async function load_model() {
     const model = await tf.loadLayersModel('model.json');
+    model.summary();
     MAXLEN = model.input.shape[1];
     function perform_dot(undotted_text) {
+        // undotted_text = undotted_text.replace(/\s+/, ' ');
         const input = text_to_input(undotted_text);
-        const prediction = model.predict(input, {batchSize: BATCH_SIZE});
+        const prediction = model.predict(input, {batchSize: 32});
         return prediction_to_text(prediction, undotted_text);
     }
 
@@ -72,7 +72,9 @@ async function load_model() {
     const dotted_text = document.getElementById("dotted_text");
     dotButton.disabled = false;
     dotButton.textContent = "נקד";
-    dotButton.addEventListener("click", (ev) => dotted_text.value = perform_dot(undotted_text.value));
+    dotButton.addEventListener("click", function (ev) {
+        dotted_text.value = perform_dot(undotted_text.value);
+    });
 }
 
 load_model();

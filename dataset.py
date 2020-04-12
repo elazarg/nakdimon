@@ -104,18 +104,17 @@ def load_file(base_paths, batch_size, validation_rate, maxlen=100, shuffle=True)
 
     m = len(input_texts) // batch_size * batch_size
 
-    def pad(table, css):
-        return preprocessing.sequence.pad_sequences(table.to_ids(css[:m]), maxlen=maxlen,
-                                                    dtype='int32', padding='post', truncating='post', value=0)
+    def pad(ords):
+        return preprocessing.sequence.pad_sequences(ords, maxlen=maxlen, dtype='int32', padding='post', truncating='post', value=0)
 
     data = Data()
     data.input_texts = input_texts
 
-    normalized_texts = pad(letters_table, input_texts)
+    normalized_texts = pad(letters_table.to_ids(input_texts[:m]))
 
-    dagesh_texts = pad(dagesh_table, dagesh_texts)
-    sin_texts = pad(sin_table, sin_texts)
-    niqqud_texts = pad(niqqud_table, niqqud_texts)
+    dagesh_texts = pad(dagesh_table.to_ids(dagesh_texts[:m]))
+    sin_texts = pad(sin_table.to_ids(sin_texts[:m]))
+    niqqud_texts = pad(niqqud_table.to_ids(niqqud_texts[:m]))
 
     v = int(m*(1-validation_rate))
     data.normalized_texts, data.normalized_validation = normalized_texts[:v], normalized_texts[v:]
