@@ -1,0 +1,7 @@
+__pycache__
+checkpoints
+.ipynb_checkpoints
+.idea
+.vscode
+group*-shard*
+model.json
