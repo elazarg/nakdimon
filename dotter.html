@@ -4,15 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    /*! Typebase.less v0.1.0 | MIT License */
-/* Setup */
 html {
-  /* Change default typefaces here */
   font-family: serif;
   font-size: 137.5%;
   -webkit-font-smoothing: antialiased;
 }
-/* Copy & Lists */
 p {
   line-height: 1.5rem;
   margin-top: 1.5rem;
@@ -21,6 +17,7 @@ p {
 textarea {
   width: 90%;
   min-height: 20%;
+  margin-top: 0.5rem;
 }
 #loader {
   position: fixed;
@@ -43,17 +40,22 @@ textarea {
   <div id="loader"></div>
   <div id='content' style='visibility: hidden;'>
     <section class='title-area'>
-      <h1 style="text-align: center;">נקדן</h1>
+      <!-- <h2 style="text-align: center;">נקדן</h2> -->
     </section>
     <label for="text"></label>
     <div class="setting" style="text-align: center;">
-        <textarea id="undotted_text" rows="6" style="font-size: 20px;" required placeholder="הכנס טקסט לניקוד"></textarea>
-        <textarea id="dotted_text" readonly rows="6" style="font-size: 20px;"></textarea>
-    </div>
-    <div style="text-align: center;" >
-        <button id="perform_dot" disabled>טוען</button>
+        <textarea id="undotted_text" rows="5" style="font-size: 20px;" required placeholder="הכנס טקסט לניקוד"></textarea>
+        <div style="text-align: center;" >
+            <button id="perform_dot" disabled>טוען</button>
+        </div>
+        <textarea id="dotted_text" readonly rows="5" style="font-size: 20px;"></textarea>
     </div>
   </div>
 </body>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+ 
 <script src="dotter.js"></script>
+<script>
+  tf.setBackend('webgl');
+  load_model();
+</script>

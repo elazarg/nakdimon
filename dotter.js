@@ -24,22 +24,44 @@ function normalize(c) {
     return 'O';
 }
 
-function from_categorical(arr, len) {
-    return arr.argMax(-1).reshape([-1]).arraySync();
+function split_to_rows(text) {
+    const space = ALL_TOKENS.indexOf(" ");
+    const arr = text.split(" ").map(s => Array.from(s).map(c => ALL_TOKENS.indexOf(c)));
+    let line = [];
+    const rows = [line];
+    for (let i=0; i < arr.length; i++) {
+        if (arr[i].length + line.length > MAXLEN) {
+            while (line.length < MAXLEN)
+                line.push(0);
+            line = [];
+            rows.push(line);
+        }
+        line.push(...arr[i]);
+        line.push(space);
+    }
+    while (line.length < MAXLEN)
+        line.push(0);
+    console.log(rows);
+    return rows;
 }
-
 
 function text_to_input(text) {
     const ords = Array.from(text).map(c => ALL_TOKENS.indexOf(normalize(c)));
     return  tf.tensor1d(ords).pad([[0, BATCH_SIZE*MAXLEN - text.length]]).reshape([BATCH_SIZE, MAXLEN]);
 }
 
-function prediction_to_text(model_output, undotted_text) {
+function prediction_to_text(input, model_output, undotted_text) {
+        
+    function from_categorical(arr, len) {
+        return arr.argMax(-1).reshape([-1]).arraySync().filter((x, i) => input[i]);
+    }
+
     const [niqqud, dagesh, sin] = model_output;
     const len = undotted_text.length;
     const niqqud_result = from_categorical(niqqud, len);
     const dagesh_result = from_categorical(dagesh, len);
     const sin_result = from_categorical(sin, len);
+
     let output = '';
     for (let i = 0; i < len; i++) {
         const c = undotted_text[i];
@@ -57,11 +79,13 @@ async function load_model() {
     const model = await tf.loadLayersModel('model.json');
     model.summary();
     MAXLEN = model.input.shape[1];
+
+
     function perform_dot(undotted_text) {
         // undotted_text = undotted_text.replace(/\s+/, ' ');
-        const input = text_to_input(undotted_text);
-        const prediction = model.predict(input, {batchSize: 32});
-        return prediction_to_text(prediction, undotted_text);
+        const input = split_to_rows(undotted_text);
+        const prediction = model.predict(tf.tensor2d(input), {batchSize: 32});
+        return prediction_to_text([].concat(... input), prediction, undotted_text);
     }
 
     document.getElementById("loader").remove();
@@ -76,5 +100,3 @@ async function load_model() {
         dotted_text.value = perform_dot(undotted_text.value);
     });
 }
-
-load_model();
