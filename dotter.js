@@ -56,7 +56,7 @@ function prediction_to_text(input, model_output, undotted_text) {
         return arr.argMax(-1).reshape([-1]).arraySync().filter((x, i) => input[i]);
     }
 
-    const [niqqud, dagesh, sin] = model_output;
+    const [niqqud, dagesh, sin, kind] = model_output;
     const len = undotted_text.length;
     const niqqud_result = from_categorical(niqqud, len);
     const dagesh_result = from_categorical(dagesh, len);

@@ -1,6 +1,7 @@
+import itertools
 from collections import defaultdict, Counter
 from typing import NamedTuple, Iterator, Iterable, List, Tuple
-
+import utils
 
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
@@ -212,13 +213,18 @@ def collect_wordmap(tokens: Iterable[Token]):
     return word_dict
 
 
+def collect_tokens(paths: Iterable[str]):
+    return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)))
+
+
 if __name__ == '__main__':
-    tokens = tokenize(iterate_file('texts/agadot.txt'))
+    tokens = collect_tokens(['texts/modern'])
     stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
-    # word_dict = collect_wordmap(stripped_tokens)
+    word_dict = collect_wordmap(stripped_tokens)
     # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
     #     print(k, ':', str(v).replace('Counter', ''))
     # print(len(word_dict))
-    for t in stripped_tokens:
-        if any(item.letter == 'ש' and not item.sin for item in t.items):
-            print(t)
+
+    for k, v in word_dict.items():
+        if "וו" in k:
+            print(v)

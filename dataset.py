@@ -1,8 +1,10 @@
 import os
-from keras import preprocessing
+from tensorflow.keras import preprocessing
+import tensorflow as tf
 import numpy as np
 
 import hebrew
+import utils
 
 
 class CharacterTable:
@@ -78,20 +80,9 @@ class Data:
         return res
 
 
-def iterate_files(base_paths):
-    for name in base_paths:
-        if not os.path.isdir(name):
-            yield name
-            continue
-        for root, dirs, files in os.walk(name):
-            for fname in files:
-                path = os.path.join(root, fname)
-                yield path
-
-
 def load_file(base_paths, batch_size, validation_rate, maxlen=100, shuffle=True) -> Data:
     heb_items = []
-    for path in iterate_files(base_paths):
+    for path in utils.iterate_files(base_paths):
         with open(path, encoding='utf-8') as f:
             text = ' '.join(f.read().split())
             heb_items.extend(hebrew.iterate_dotted_text(text))
@@ -122,6 +113,27 @@ def load_file(base_paths, batch_size, validation_rate, maxlen=100, shuffle=True)
     data.sin_texts, data.sin_validation = sin_texts[:v], sin_texts[v:]
     data.niqqud_texts, data.niqqud_validation = niqqud_texts[:v], niqqud_texts[v:]
     return data
+
+
+class CircularLearningRate(tf.keras.callbacks.Callback):
+    def __init__(self, min_lr_1, max_lr, min_lr_2):
+        super().__init__()
+        self.min_lr_1 = min_lr_1
+        self.max_lr = max_lr
+        self.min_lr_2 = min_lr_2
+
+    def set_dataset(self, data, batch_size):
+        self.mid = data.normalized_texts.shape[0] / batch_size / 2
+
+    def on_train_batch_end(self, batch, logs=None):
+        if batch < self.mid:
+            lb = self.min_lr_1
+            way = self.mid - batch
+        else:
+            lb = self.min_lr_2
+            way = batch - self.mid
+        lr = self.max_lr - way / self.mid * (self.max_lr - lb)
+        tf.keras.backend.set_value(self.model.optimizer.lr, lr)
 
 
 if __name__ == '__main__':
