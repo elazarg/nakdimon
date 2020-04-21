@@ -35,6 +35,7 @@ letters_table = CharacterTable(hebrew.SPECIAL_TOKENS + hebrew.VALID_LETTERS)
 dagesh_table = CharacterTable(hebrew.DAGESH)
 sin_table = CharacterTable(hebrew.NIQQUD_SIN)
 niqqud_table = CharacterTable(hebrew.NIQQUD)
+KINDS = ('biblical', 'rabanit', 'poetry', 'pre_modern', 'modern', 'garbage')
 
 
 def print_tables():
@@ -75,6 +76,7 @@ class Data:
     dagesh: np.ndarray = None
     sin: np.ndarray = None
     niqqud: np.ndarray = None
+    kind: np.ndarray = None
 
     @staticmethod
     def concatenate(others):
@@ -84,10 +86,11 @@ class Data:
         self.dagesh = np.concatenate([x.dagesh for x in others])
         self.sin = np.concatenate([x.sin for x in others])
         self.niqqud = np.concatenate([x.niqqud for x in others])
+        self.kind = np.concatenate([x.kind for x in others])
         return self
 
     def shapes(self):
-        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape
+        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape, self.kind.shape
 
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
@@ -105,6 +108,10 @@ class Data:
         self.text = pad(text, dtype='<U1', value=0)
         return self
 
+    def add_kind(self, path):
+        dirname = path.replace(os.path.sep, '/').split('/')[1]
+        self.kind = np.full(len(self), KINDS.index(dirname))
+
     def __len__(self):
         return self.normalized.shape[0]  # len(input_texts) // batch_size * batch_size
 
@@ -118,6 +125,7 @@ class Data:
         self.dagesh, valid.dagesh = self.dagesh[valid_idx], self.dagesh[test_idx]
         self.sin, valid.sin = self.sin[valid_idx], self.sin[test_idx]
         self.niqqud, valid.niqqud = self.niqqud[valid_idx], self.niqqud[test_idx]
+        self.kind, valid.kind = self.kind[valid_idx], self.kind[test_idx]
         return valid
 
     def print_stats(self):
@@ -127,7 +135,9 @@ class Data:
 def load_file(path: str, maxlen: int) -> Data:
     with open(path, encoding='utf-8') as f:
         text = ' '.join(f.read().split())
-    return Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
+    res = Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
+    res.add_kind(path)
+    return res
 
 
 def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
@@ -161,4 +171,5 @@ class CircularLearningRate(tf.keras.callbacks.Callback):
 if __name__ == '__main__':
     data, valid = load_data(['texts/modern'], 0.1, maxlen=64)
     data.print_stats()
+    print(data.kind[0])
     valid.print_stats()
