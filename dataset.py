@@ -1,3 +1,5 @@
+from typing import Tuple, List
+
 import os
 from tensorflow.keras import preprocessing
 import tensorflow as tf
@@ -46,73 +48,93 @@ def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
+def merge(ts, ds=None, ss=None, ns=None):
+    default = [[''] * len(ts[0]) for x in range(len(ts))]
+    texts = [[letters_table.indices_char[x] for x in line] for line in ts]
+    dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds] if ds is not None else default
+    sins = [[sin_table.indices_char[x] for x in xs] for xs in ss] if ss is not None else default
+    niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns] if ns is not None else default
+    assert len(texts) == len(niqquds)
+    res = []
+    for i in range(len(texts)):
+        sentence = []
+        for c, d, s, n in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
+            if c == letters_table.PAD_TOKEN:
+                break
+            sentence.append(c)
+            sentence.append(d)
+            sentence.append(s)
+            sentence.append(n)
+        res.append(''.join(sentence))
+    return res
+
+
 class Data:
-    input_texts: np.ndarray = None
+    text: np.ndarray = None
+    normalized: np.ndarray = None
+    dagesh: np.ndarray = None
+    sin: np.ndarray = None
+    niqqud: np.ndarray = None
 
-    normalized_texts: np.ndarray = None
-    dagesh_texts: np.ndarray = None
-    sin_texts: np.ndarray = None
-    niqqud_texts: np.ndarray = None
+    @staticmethod
+    def concatenate(others):
+        self = Data()
+        self.text = np.concatenate([x.text for x in others])
+        self.normalized = np.concatenate([x.normalized for x in others])
+        self.dagesh = np.concatenate([x.dagesh for x in others])
+        self.sin = np.concatenate([x.sin for x in others])
+        self.niqqud = np.concatenate([x.niqqud for x in others])
+        return self
 
-    normalized_validation: np.ndarray = None
-    dagesh_validation: np.ndarray = None
-    sin_validation: np.ndarray = None
-    niqqud_validation: np.ndarray = None
+    def shapes(self):
+        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape
 
-    def merge(self, ts, ds=None, ss=None, ns=None):
-        default = [[''] * len(ts[0]) for x in range(len(ts))]
-        texts = [[letters_table.indices_char[x] for x in line] for line in ts]
-        dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds] if ds is not None else default
-        sins = [[sin_table.indices_char[x] for x in xs] for xs in ss] if ss is not None else default
-        niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns] if ns is not None else default
-        assert len(texts) == len(niqquds)
-        res = []
-        for i in range(len(texts)):
-            sentence = []
-            for c, d, s, n in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
-                if c == letters_table.PAD_TOKEN:
-                    break
-                sentence.append(c)
-                sentence.append(d)
-                sentence.append(s)
-                sentence.append(n)
-            res.append(''.join(sentence))
-        return res
+    @staticmethod
+    def from_text(heb_items, maxlen: int) -> 'Data':
+        self = Data()
+        text, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
+
+        def pad(ords, dtype='int32', value=0):
+            return preprocessing.sequence.pad_sequences(ords, maxlen=maxlen,
+                        dtype=dtype, padding='post', truncating='post', value=value)
+
+        self.normalized = pad(letters_table.to_ids(text))
+        self.dagesh = pad(dagesh_table.to_ids(dagesh))
+        self.sin = pad(sin_table.to_ids(sin))
+        self.niqqud = pad(niqqud_table.to_ids(niqqud))
+        self.text = pad(text, dtype='<U1', value=0)
+        return self
+
+    def __len__(self):
+        return self.normalized.shape[0]  # len(input_texts) // batch_size * batch_size
+
+    def split_validation(self, validation_rate):
+        indices = np.random.permutation(len(self))
+        v = int(len(self) * (1 - validation_rate))
+        valid_idx, test_idx = indices[:v], indices[v:]
+        valid = Data()
+        self.text, valid.text = self.text[valid_idx], self.text[test_idx]
+        self.normalized, valid.normalized = self.normalized[valid_idx], self.normalized[test_idx]
+        self.dagesh, valid.dagesh = self.dagesh[valid_idx], self.dagesh[test_idx]
+        self.sin, valid.sin = self.sin[valid_idx], self.sin[test_idx]
+        self.niqqud, valid.niqqud = self.niqqud[valid_idx], self.niqqud[test_idx]
+        return valid
+
+    def print_stats(self):
+        print(self.shapes())
 
 
-def load_file(base_paths, batch_size, validation_rate, maxlen=100, shuffle=True) -> Data:
-    heb_items = []
-    for path in utils.iterate_files(base_paths):
-        with open(path, encoding='utf-8') as f:
-            text = ' '.join(f.read().split())
-            heb_items.extend(hebrew.iterate_dotted_text(text))
+def load_file(path: str, maxlen: int) -> Data:
+    with open(path, encoding='utf-8') as f:
+        text = ' '.join(f.read().split())
+    return Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
 
-    splitted_lines = list(hebrew.split_by_length(heb_items, maxlen))
-    if shuffle:
-        np.random.shuffle(splitted_lines)
 
-    input_texts, dagesh_texts, sin_texts, niqqud_texts = zip(*(zip(*line) for line in splitted_lines))
-
-    m = len(input_texts) // batch_size * batch_size
-
-    def pad(ords):
-        return preprocessing.sequence.pad_sequences(ords, maxlen=maxlen, dtype='int32', padding='post', truncating='post', value=0)
-
-    data = Data()
-    data.input_texts = input_texts
-
-    normalized_texts = pad(letters_table.to_ids(input_texts[:m]))
-
-    dagesh_texts = pad(dagesh_table.to_ids(dagesh_texts[:m]))
-    sin_texts = pad(sin_table.to_ids(sin_texts[:m]))
-    niqqud_texts = pad(niqqud_table.to_ids(niqqud_texts[:m]))
-
-    v = int(m*(1-validation_rate))
-    data.normalized_texts, data.normalized_validation = normalized_texts[:v], normalized_texts[v:]
-    data.dagesh_texts, data.dagesh_validation = dagesh_texts[:v], dagesh_texts[v:]
-    data.sin_texts, data.sin_validation = sin_texts[:v], sin_texts[v:]
-    data.niqqud_texts, data.niqqud_validation = niqqud_texts[:v], niqqud_texts[v:]
-    return data
+def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
+    corpus = [load_file(path, maxlen) for path in utils.iterate_files(base_paths)]
+    result = Data.concatenate(corpus)
+    validation = result.split_validation(validation_rate)
+    return result, validation
 
 
 class CircularLearningRate(tf.keras.callbacks.Callback):
@@ -123,7 +145,7 @@ class CircularLearningRate(tf.keras.callbacks.Callback):
         self.min_lr_2 = min_lr_2
 
     def set_dataset(self, data, batch_size):
-        self.mid = data.normalized_texts.shape[0] / batch_size / 2
+        self.mid = len(data) / batch_size / 2
 
     def on_train_batch_end(self, batch, logs=None):
         if batch < self.mid:
@@ -137,7 +159,6 @@ class CircularLearningRate(tf.keras.callbacks.Callback):
 
 
 if __name__ == '__main__':
-    modern = ['ali_baba.txt', 'uriel_ofek']
-    filenames = [os.path.join('texts', f) for f in modern]
-    data = load_file(filenames, 32, 0.01, maxlen=60, shuffle=True)
-    print(data.normalized_texts[0])
+    data, valid = load_data(['texts/modern'], 0.1, maxlen=64)
+    data.print_stats()
+    valid.print_stats()

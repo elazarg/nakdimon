@@ -1,7 +1,8 @@
+from typing import List
 import os
 
 
-def iterate_files(base_paths):
+def iterate_files(base_paths: List[str]) -> List[str]:
     for name in base_paths:
         if not os.path.isdir(name):
             yield name

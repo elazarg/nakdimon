@@ -131,23 +131,18 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         yield HebrewItem(letter, dagesh, sin, niqqud)
 
 
-def split_by_length(heb_items, maxlen):
+def split_by_length(characters: Iterable[HebrewItem], maxlen: int):
     assert maxlen > 1
-
-    maxlen -= 1
-
-    start = 0
-    while start < len(heb_items):
-        if len(heb_items) <= start + maxlen:
-            yield heb_items[start:]
-            break
-        ub = maxlen
-        while ub > 0 and heb_items[start + ub][0] != ' ':
-            ub -= 1
-        if ub == 0:
-            ub = maxlen
-        yield heb_items[start:start + ub]
-        start += ub + 1
+    out = []
+    space = maxlen
+    for c in characters:
+        if c.letter == ' ':
+            space = len(out)
+        out.append(c)
+        if len(out) == maxlen - 1:
+            yield out[:space+1]
+            out = out[space+1:]
+    yield out
 
 
 class Token:
@@ -218,13 +213,18 @@ def collect_tokens(paths: Iterable[str]):
 
 
 if __name__ == '__main__':
-    tokens = collect_tokens(['texts/modern'])
-    stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
-    word_dict = collect_wordmap(stripped_tokens)
-    # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
-    #     print(k, ':', str(v).replace('Counter', ''))
-    # print(len(word_dict))
-
-    for k, v in word_dict.items():
-        if "וו" in k:
-            print(v)
+    for line in split_by_length(iterate_dotted_text('asd asfas w asdfwq adsdas asd  we'), 10):
+        print(len(line), line)
+    # tokens = collect_tokens(['texts/modern'])
+    # stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
+    # word_dict = collect_wordmap(stripped_tokens)
+    # # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
+    # #     print(k, ':', str(v).replace('Counter', ''))
+    # # print(len(word_dict))
+    #
+    # for t in stripped_tokens:
+    #     if t.is_undotted() and '"' not in t.to_undotted():
+    #         print(t)
+    # for k, v in word_dict.items():
+    #     if "וו" in k:
+    #         print(v)
