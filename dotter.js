@@ -30,7 +30,7 @@ function split_to_rows(text) {
     let line = [];
     const rows = [line];
     for (let i=0; i < arr.length; i++) {
-        if (arr[i].length + line.length > MAXLEN) {
+        if (arr[i].length + line.length + 1> MAXLEN) {
             while (line.length < MAXLEN)
                 line.push(0);
             line = [];
@@ -75,21 +75,23 @@ function prediction_to_text(input, model_output, undotted_text) {
     return output;
 }
 
+function remove_niqqud(text) {
+    return text.replace(/[\u0591-\u05C7]/g, '');
+}
+
 async function load_model() {
-    const model = await tf.loadLayersModel('model.json');
+    const bar = document.getElementById("loader");
+    const model = await tf.loadLayersModel('model.json', {onProgress: (fraction) => { bar.set(100 * fraction); } });
     model.summary();
     MAXLEN = model.input.shape[1];
 
 
     function perform_dot(undotted_text) {
-        // undotted_text = undotted_text.replace(/\s+/, ' ');
+        undotted_text = remove_niqqud(undotted_text);
         const input = split_to_rows(undotted_text);
         const prediction = model.predict(tf.tensor2d(input), {batchSize: 32});
         return prediction_to_text([].concat(... input), prediction, undotted_text);
     }
-
-    document.getElementById("loader").remove();
-    document.getElementById("content").style.visibility = 'visible';
 
     const dotButton = document.getElementById("perform_dot");
     const undotted_text = document.getElementById("undotted_text");

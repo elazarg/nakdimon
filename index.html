@@ -1,0 +1,81 @@
+<!doctype html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" type="text/css" href="loading-bar.css"/>
+  <style>
+    @import url(http://fonts.googleapis.com/earlyaccess/alefhebrew.css);
+
+html, body {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  font-family: serif;
+  -webkit-font-smoothing: antialiased;
+}
+p {
+  line-height: 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0;
+}
+#textboxes {
+  text-align: center;
+	width: 100%;
+	height: 100%;
+}
+#perform_dot {
+	font-family: "Alef Hebrew",
+               "Helvetica Neue",
+               Helvetica,
+               Arial,
+               sans-serif;
+  font-size: 30px;
+}
+textarea {
+	font-family: "Alef Hebrew",
+               "Helvetica Neue",
+               Helvetica,
+               Arial,
+               sans-serif;
+  font-size: 30px;
+  width: inherit;
+  height: 30vh;
+  width: 90%;
+	border: 3px solid #cccccc;
+	background-color: #e6e6e6;
+	padding: 5px;
+	background-position: bottom right;
+	background-repeat: no-repeat;
+  margin-top: 0.5rem;
+}
+  </style>
+</head>
+
+<body dir="rtl">
+  <div id='content'>
+    <!-- 
+      <section class='title-area'>
+      <h2 style="text-align: center;">נקדן</h2>
+    </section>
+     -->
+    <label for="text"></label>
+    <div id="textboxes">
+        <textarea id="undotted_text" required placeholder="הכנס טקסט לניקוד"></textarea>
+        <div>
+            <button id="perform_dot" disabled>טוען</button>
+            <div id="loader" class="ldBar" data-value="0"></div>
+        </div>
+        <textarea id="dotted_text" readonly></textarea>
+    </div>
+  </div>
+</body>
+
+
+<script type="text/javascript" src="loading-bar.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> 
+<script src="dotter.js"></script>
+<script>
+  tf.setBackend('webgl');
+  load_model();
+</script>
