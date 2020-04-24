@@ -80,8 +80,8 @@ function remove_niqqud(text) {
 }
 
 async function load_model() {
-    const bar = document.getElementById("loader");
-    const model = await tf.loadLayersModel('model.json', {onProgress: (fraction) => { bar.set(100 * fraction); } });
+    const bar = new Nanobar();
+    const model = await tf.loadLayersModel('model.json', {onProgress: (fraction) => { bar.go(100 * fraction); } });
     model.summary();
     MAXLEN = model.input.shape[1];
 

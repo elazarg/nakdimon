@@ -2,7 +2,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <link rel="stylesheet" type="text/css" href="loading-bar.css"/>
+  
   <style>
     @import url(http://fonts.googleapis.com/earlyaccess/alefhebrew.css);
 
@@ -61,17 +61,16 @@ textarea {
     <label for="text"></label>
     <div id="textboxes">
         <textarea id="undotted_text" required placeholder="הכנס טקסט לניקוד"></textarea>
-        <div>
-            <button id="perform_dot" disabled>טוען</button>
+        <div id="separator">
             <div id="loader" class="ldBar" data-value="0"></div>
+            <button id="perform_dot" disabled>טוען</button>
         </div>
         <textarea id="dotted_text" readonly></textarea>
     </div>
   </div>
 </body>
 
-
-<script type="text/javascript" src="loading-bar.js"></script>
+<script src="https://nanobar.jacoborus.codes/js/nanobar.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> 
 <script src="dotter.js"></script>
