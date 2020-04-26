@@ -49,12 +49,11 @@ def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
-def merge(ts, ds=None, ss=None, ns=None):
-    default = [[''] * len(ts[0]) for x in range(len(ts))]
+def merge(ts, ds, ss, ns):
     texts = [[letters_table.indices_char[x] for x in line] for line in ts]
-    dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds] if ds is not None else default
-    sins = [[sin_table.indices_char[x] for x in xs] for xs in ss] if ss is not None else default
-    niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns] if ns is not None else default
+    dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds]
+    sins = [[sin_table.indices_char[x] for x in xs] for xs in ss]
+    niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns]
     assert len(texts) == len(niqquds)
     res = []
     for i in range(len(texts)):
@@ -87,10 +86,20 @@ class Data:
         self.sin = np.concatenate([x.sin for x in others])
         self.niqqud = np.concatenate([x.niqqud for x in others])
         self.kind = np.concatenate([x.kind for x in others])
+        self.shuffle()
         return self
 
     def shapes(self):
         return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape, self.kind.shape
+
+    def shuffle(self):
+        indices = np.random.permutation(len(self))
+        self.text = self.text[indices]
+        self.normalized = self.normalized[indices]
+        self.dagesh = self.dagesh[indices]
+        self.niqqud = self.niqqud[indices]
+        self.sin = self.sin[indices]
+        self.kind = self.kind[indices]
 
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
@@ -115,19 +124,6 @@ class Data:
     def __len__(self):
         return self.normalized.shape[0]
 
-    def split_validation(self, validation_rate):
-        indices = np.random.permutation(len(self))
-        v = int(len(self) * (1 - validation_rate))
-        valid_idx, test_idx = indices[:v], indices[v:]
-        valid = Data()
-        self.text, valid.text = self.text[valid_idx], self.text[test_idx]
-        self.normalized, valid.normalized = self.normalized[valid_idx], self.normalized[test_idx]
-        self.dagesh, valid.dagesh = self.dagesh[valid_idx], self.dagesh[test_idx]
-        self.sin, valid.sin = self.sin[valid_idx], self.sin[test_idx]
-        self.niqqud, valid.niqqud = self.niqqud[valid_idx], self.niqqud[test_idx]
-        self.kind, valid.kind = self.kind[valid_idx], self.kind[test_idx]
-        return valid
-
     def print_stats(self):
         print(self.shapes())
 
@@ -140,8 +136,12 @@ def load_file(path: str, maxlen: int) -> Data:
     return res
 
 
+def read_corpus(base_paths, maxlen):
+    return [load_file(path, maxlen) for path in utils.iterate_files(base_paths)]
+
+
 def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
-    corpus = [load_file(path, maxlen) for path in utils.iterate_files(base_paths)]
+    corpus = read_corpus(base_paths, maxlen)
     # result = Data.concatenate(corpus)
     # validation = result.split_validation(validation_rate)
 
@@ -182,7 +182,8 @@ class CircularLearningRate(tf.keras.callbacks.Callback):
 
 
 if __name__ == '__main__':
-    data, valid = load_data(['texts/modern'], 0.1, maxlen=64)
+    data = Data.concatenate(read_corpus(['texts/modern/wiki/1.txt'], maxlen=64))
     data.print_stats()
-    print(data.kind[0])
-    valid.print_stats()
+    print(np.concatenate([data.normalized[:1], data.sin[:1]]))
+    res = merge(data.normalized[:1], data.dagesh[:1], data.sin[:1], data.niqqud[:1])
+    print(res)

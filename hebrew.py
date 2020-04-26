@@ -213,18 +213,16 @@ def collect_tokens(paths: Iterable[str]):
 
 
 if __name__ == '__main__':
-    for line in split_by_length(iterate_dotted_text('asd asfas w asdfwq adsdas asd  we'), 10):
-        print(len(line), line)
-    # tokens = collect_tokens(['texts/modern'])
-    # stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
-    # word_dict = collect_wordmap(stripped_tokens)
-    # # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
-    # #     print(k, ':', str(v).replace('Counter', ''))
-    # # print(len(word_dict))
-    #
-    # for t in stripped_tokens:
-    #     if t.is_undotted() and '"' not in t.to_undotted():
-    #         print(t)
-    # for k, v in word_dict.items():
-    #     if "וו" in k:
-    #         print(v)
+    tokens = collect_tokens(['texts/modern/newspapers/27.txt'])
+    stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
+    word_dict = collect_wordmap(stripped_tokens)
+    for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
+        print(k, ':', str(v).replace('Counter', ''))
+    print(len(word_dict))
+
+    for t in stripped_tokens:
+        if t.is_undotted() and '"' not in t.to_undotted():
+            print(t)
+    for k, v in word_dict.items():
+        if "וו" in k:
+            print(v)
