@@ -113,7 +113,7 @@ class Data:
         self.kind = np.full(len(self), KINDS.index(dirname))
 
     def __len__(self):
-        return self.normalized.shape[0]  # len(input_texts) // batch_size * batch_size
+        return self.normalized.shape[0]
 
     def split_validation(self, validation_rate):
         indices = np.random.permutation(len(self))
@@ -142,9 +142,22 @@ def load_file(path: str, maxlen: int) -> Data:
 
 def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
     corpus = [load_file(path, maxlen) for path in utils.iterate_files(base_paths)]
-    result = Data.concatenate(corpus)
-    validation = result.split_validation(validation_rate)
-    return result, validation
+    # result = Data.concatenate(corpus)
+    # validation = result.split_validation(validation_rate)
+
+    size = sum(len(x) for x in corpus)
+    validation_size = size * validation_rate
+    np.random.shuffle(corpus)
+    validation = []
+    total_size = 0
+    while total_size < validation_size:
+        if abs(total_size - validation_size) < abs(total_size + len(corpus[-1]) - validation_size):
+            break
+        c = corpus.pop()
+        total_size += len(c)
+        validation.append(c)
+
+    return Data.concatenate(corpus), Data.concatenate(validation)
 
 
 class CircularLearningRate(tf.keras.callbacks.Callback):
