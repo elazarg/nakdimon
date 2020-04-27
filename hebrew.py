@@ -175,6 +175,9 @@ class Token:
     def is_undotted(self):
         return len(self.items) > 1 and all(c.niqqud == '' for c in self.items)
 
+    def is_definite(self):
+        return len(self.items) > 2 and self.items[0].niqqud == 'הַ'[-1] and self.items[0].letter in 'כבלה'
+
 
 def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem]) -> Iterator[HebrewItem]:
     current = []
@@ -213,16 +216,20 @@ def collect_tokens(paths: Iterable[str]):
 
 
 if __name__ == '__main__':
-    tokens = collect_tokens(['texts/modern/newspapers/27.txt'])
+    tokens = collect_tokens(['texts/pre_modern/'])
     stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
     word_dict = collect_wordmap(stripped_tokens)
-    for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
-        print(k, ':', str(v).replace('Counter', ''))
-    print(len(word_dict))
+    # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
+    #     print(k, ':', str(v).replace('Counter', ''))
+    # print(len(word_dict))
 
-    for t in stripped_tokens:
-        if t.is_undotted() and '"' not in t.to_undotted():
+    for t in tokens:
+        if t.is_definite() and t.items[1].letter not in 'אהחער' and not t.items[1].dagesh:
             print(t)
-    for k, v in word_dict.items():
-        if "וו" in k:
-            print(v)
+    #
+    # for t in stripped_tokens:
+    #     if t.is_undotted() and '"' not in t.to_undotted():
+    #         print(t)
+    # for k, v in word_dict.items():
+    #     if "וו" in k:
+    #         print(v)
