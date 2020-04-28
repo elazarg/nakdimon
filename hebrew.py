@@ -2,6 +2,7 @@ import itertools
 from collections import defaultdict, Counter
 from typing import NamedTuple, Iterator, Iterable, List, Tuple
 import utils
+from functools import lru_cache
 
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
@@ -149,26 +150,33 @@ class Token:
     def __init__(self, items: List[HebrewItem]):
         self.items = items
 
+    @lru_cache()
     def __str__(self):
         return ''.join(str(c) for c in self.items)
 
     def __repr__(self):
         return 'Token(' + repr(self.items) + ')'
 
+    def __lt__(self, other: 'Token'):
+        return (self.to_undotted(), str(self)) < (other.to_undotted(), str(other))
+
     def strip_nonhebrew(self) -> 'Token':
         start = 0
         end = len(self.items) - 1
-        while self.items[start].letter not in HEBREW_LETTERS:
-            start += 1
+        while True:
             if start >= len(self.items):
                 return Token([])
-        while self.items[end].letter not in HEBREW_LETTERS:
+            if self.items[start].letter in HEBREW_LETTERS + ANY_NIQQUD:
+                break
+            start += 1
+        while self.items[end].letter not in HEBREW_LETTERS + ANY_NIQQUD:
             end -= 1
         return Token(self.items[start:end+1])
 
     def __bool__(self):
         return bool(self.items)
 
+    @lru_cache()
     def to_undotted(self):
         return ''.join(str(c.letter) for c in self.items)
 
@@ -184,12 +192,13 @@ def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem])
     for c in char_iterator:
         if c.letter.isspace() or c.letter == '-':
             if current:
-                tokens_list.append(Token(current))
+                tokens_list.append(Token(current).strip_nonhebrew())
             current = []
         else:
             current.append(c)
         yield c
-    tokens_list.append(Token(current))
+    if current:
+        tokens_list.append(Token(current).strip_nonhebrew())
 
 
 def iterate_file(path):
@@ -217,6 +226,7 @@ def collect_tokens(paths: Iterable[str]):
 
 if __name__ == '__main__':
     tokens = collect_tokens(['texts/pre_modern/'])
+    tokens.sort()
     stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
     word_dict = collect_wordmap(stripped_tokens)
     # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
