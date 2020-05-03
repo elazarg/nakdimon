@@ -3,7 +3,6 @@ import os
 
 from bs4 import BeautifulSoup
 
-
 with open('texts/rambam_mamre.txt', 'w', encoding='utf-8') as out:
     for fname in os.listdir('html/rambam_mamre/'):
         with open('html/rambam_mamre/' + fname, 'rb') as f:
