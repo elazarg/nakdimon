@@ -47,19 +47,19 @@ def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
-def merge(ts, ds, ss, ns):
-    texts = [[letters_table.indices_char[x] for x in line] for line in ts]
+def merge(texts, ts, ds, ss, ns):
+    normalizeds = [[letters_table.indices_char[x] for x in line] for line in ts]
     dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds]
     sins = [[sin_table.indices_char[x] for x in xs] for xs in ss]
     niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns]
-    assert len(texts) == len(niqquds)
+    assert len(normalizeds) == len(niqquds)
     res = []
     for i in range(len(texts)):
         sentence = []
-        for c, d, s, n in zip(texts[i], dageshs[i], sins[i], niqquds[i]):
+        for t, c, d, s, n in zip(texts[i], normalizeds[i], dageshs[i], sins[i], niqquds[i]):
             if c == letters_table.PAD_TOKEN:
                 break
-            sentence.append(c)
+            sentence.append(t)
             sentence.append(d)
             sentence.append(s)
             sentence.append(n)
@@ -103,13 +103,13 @@ class Data:
     def from_text(heb_items, maxlen: int) -> 'Data':
         from tensorflow.keras import preprocessing
         self = Data()
-        text, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
+        text, normalized, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
 
         def pad(ords, dtype='int32', value=0):
             return preprocessing.sequence.pad_sequences(ords, maxlen=maxlen,
                         dtype=dtype, padding='post', truncating='post', value=value)
 
-        self.normalized = pad(letters_table.to_ids(text))
+        self.normalized = pad(letters_table.to_ids(normalized))
         self.dagesh = pad(dagesh_table.to_ids(dagesh))
         self.sin = pad(sin_table.to_ids(sin))
         self.niqqud = pad(niqqud_table.to_ids(niqqud))
@@ -141,12 +141,12 @@ def read_corpus(base_paths, maxlen):
 
 def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
     corpus = read_corpus(base_paths, maxlen)
+    np.random.shuffle(corpus)
     # result = Data.concatenate(corpus)
     # validation = result.split_validation(validation_rate)
 
     size = sum(len(x) for x in corpus)
     validation_size = size * validation_rate
-    np.random.shuffle(corpus)
     validation = []
     total_size = 0
     while total_size < validation_size:
@@ -156,7 +156,9 @@ def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tup
         total_size += len(c)
         validation.append(c)
 
-    return Data.concatenate(corpus), Data.concatenate(validation)
+    train = Data.concatenate(corpus)
+    train.shuffle()
+    return train, Data.concatenate(validation)
 
 
 if __name__ == '__main__':

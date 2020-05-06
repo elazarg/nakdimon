@@ -43,6 +43,7 @@ def normalize(c):
 
 class HebrewItem(NamedTuple):
     letter: str
+    normalized: str
     dagesh: str
     sin: str
     niqqud: str
@@ -100,13 +101,14 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         dagesh = ''
         niqqud = ''
         sin = ''
-        letter = normalize(text[i])
+        letter = text[i]
+        normalized = normalize(letter)
         i += 1
-        if is_hebrew_letter(letter):
+        if is_hebrew_letter(normalized):
             maybe_dagesh = False
             while i < n and text[i] in ANY_NIQQUD:
                 if text[i] == DAGESH_LETTER:
-                    if letter == 'ו':
+                    if normalized == 'ו':
                         maybe_dagesh = True
                     else:
                         dagesh = text[i]
@@ -126,10 +128,10 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                     dagesh = DAGESH_LETTER
                 else:
                     niqqud = DAGESH_LETTER
-            if letter == 'ש' and not sin and niqqud == HOLAM and i < n and not is_hebrew_letter(text[i]):
+            if normalized == 'ש' and not sin and niqqud == HOLAM and i < n and not is_hebrew_letter(text[i]):
                 niqqud = ''
                 sin = SHIN_SMALIT
-        yield HebrewItem(letter, dagesh, sin, niqqud)
+        yield HebrewItem(letter, normalized, dagesh, sin, niqqud)
 
 
 def split_by_length(characters: Iterable[HebrewItem], maxlen: int):

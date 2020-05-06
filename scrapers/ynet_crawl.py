@@ -11,7 +11,7 @@ def rel_link(rel):
 def fetch(url):
     response = requests.get(rel_link(url))
     html_doc = response.content.decode('utf-8')
-    return BeautifulSoup(html_doc, 'html.parser')
+    return BeautifulSoup(html_doc, 'lxml')
 
 
 MONTHS = {'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'}
