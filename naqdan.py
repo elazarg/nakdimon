@@ -1,8 +1,12 @@
+import tensorflow as tf
+
 from tensorflow.keras.models import load_model
 
 import utils
 import dataset
 import hebrew
+
+tf.config.set_visible_devices([], 'GPU')
 
 model = load_model('./modern.h5')
 
@@ -25,4 +29,4 @@ def diacritize_file(input_filename='-', output_filename='-'):
 
 
 if __name__ == '__main__':
-    diacritize_file('texts/modern/newspapers/1.txt')
+    diacritize_file('sample.txt')

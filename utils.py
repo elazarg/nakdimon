@@ -18,7 +18,7 @@ def iterate_files(base_paths: List[str]) -> List[str]:
 
 # from: https://stackoverflow.com/a/45735618/2289509
 @contextlib.contextmanager
-def smart_open(filename: str, mode: str = 'r', *args, **kwargs):
+def smart_open(filename: str, mode: str = 'r', encoding: str = 'utf-8', *args, **kwargs):
     """Open files and i/o streams transparently."""
     if filename == '-':
         if 'r' in mode:

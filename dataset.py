@@ -83,12 +83,12 @@ class Data:
         self.dagesh = np.concatenate([x.dagesh for x in others])
         self.sin = np.concatenate([x.sin for x in others])
         self.niqqud = np.concatenate([x.niqqud for x in others])
-        self.kind = np.concatenate([x.kind for x in others])
+        # self.kind = np.concatenate([x.kind for x in others])
         self.shuffle()
         return self
 
     def shapes(self):
-        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape, self.kind.shape
+        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape #, self.kind.shape
 
     def shuffle(self):
         indices = np.random.permutation(len(self))
@@ -97,7 +97,7 @@ class Data:
         self.dagesh = self.dagesh[indices]
         self.niqqud = self.niqqud[indices]
         self.sin = self.sin[indices]
-        self.kind = self.kind[indices]
+        # self.kind = self.kind[indices]
 
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
@@ -118,8 +118,10 @@ class Data:
         return self
 
     def add_kind(self, path):
-        dirname = path.replace(os.path.sep, '/').split('/')[1]
-        self.kind = np.full(len(self), KINDS.index(dirname))
+        base = path.replace(os.path.sep, '/').split('/')
+        if len(base) > 1:
+            dirname = base[1]
+            self.kind = np.full(len(self), KINDS.index(dirname))
 
     def __len__(self):
         return self.normalized.shape[0]
@@ -132,7 +134,7 @@ def load_file(path: str, maxlen: int) -> Data:
     with open(path, encoding='utf-8') as f:
         text = ' '.join(f.read().split())
     res = Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
-    res.add_kind(path)
+    # res.add_kind(path)
     return res
 
 
