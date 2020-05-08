@@ -4,7 +4,7 @@ import utils
 import dataset
 import hebrew
 
-model = load_model('models/modern.h5')
+model = load_model('./modern.h5')
 
 
 def naqdan(data: dataset.Data) -> str:

@@ -4,6 +4,8 @@ import logging
 from bs4 import BeautifulSoup
 import requests
 
+import utils
+
 
 def get(url):
     with requests.Session() as session:
@@ -19,7 +21,7 @@ def get(url):
 
 def output(html, out_filename):
     soup = BeautifulSoup(html, 'lxml')
-    with open(out_filename, 'w', encoding='utf-8') as f:
+    with utils.smart_open(out_filename, 'w', encoding='utf-8') as f:
         for p in soup.find_all('p'):
             bold = p.find('font', attrs={'style': 'FONT-WEIGHT: bold; FONT-SIZE: 13px;'})
             if bold and bold.text.strip().endswith(':'):
@@ -31,12 +33,12 @@ def output(html, out_filename):
                 print(text, file=f)
 
 
-def fetch(ynet_id):
+def fetch(ynet_id, out_filename=None):
     url = 'https://www.ynet.co.il/articles/0,7340,L-{},00.html'.format(ynet_id)
     html = get(url)
     if html is None:
         return
-    out_filename = '../undotted_texts/ynet/{}.txt'.format(ynet_id)
+    out_filename = out_filename or '../undotted_texts/ynet/{}.txt'.format(ynet_id)
     output(html, out_filename)
 
 
@@ -57,7 +59,4 @@ def run_parallel(n=None):
 
 
 if __name__ == '__main__':
-    try:
-        run_parallel()
-    except KeyboardInterrupt:
-        print('Exiting')
+    fetch('5265624', '-')

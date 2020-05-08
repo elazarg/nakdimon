@@ -101,6 +101,7 @@ class Data:
 
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
+        assert heb_items
         from tensorflow.keras import preprocessing
         self = Data()
         text, normalized, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
