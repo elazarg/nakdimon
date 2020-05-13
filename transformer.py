@@ -284,7 +284,7 @@ class Transformer(tf.keras.Model):
         tf.TensorSpec(shape=(None, None), dtype=tf.int64),
     ]
 
-    # @tf.function(input_signature=train_step_signature)
+    @tf.function(input_signature=train_step_signature)
     def train_step(self, inp, tar):
         tar_inp = tar[:, :-1]
         tar_real = tar[:, 1:]
@@ -298,8 +298,8 @@ class Transformer(tf.keras.Model):
         gradients = tape.gradient(loss, self.trainable_variables)    
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         
-        return {"loss": tf.keras.metrics.Mean(name='train_loss')(loss).result(),
-                "acc":  tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')(tar_real, predictions).result() }
+        return {"loss": train_loss(loss),
+                "acc":  train_accuracy(tar_real, predictions) }
 
 
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
@@ -348,8 +348,7 @@ def create_masks(inp, tar):
     dec_padding_mask = create_padding_mask(inp)
     
     # Used in the 1st attention block in the decoder.
-    # It is used to pad and mask future tokens in the input received by 
-    # the decoder.
+    # It is used to pad and mask future tokens in the input received by the decoder.
     look_ahead_mask = create_look_ahead_mask(tf.shape(tar)[1])
     dec_target_padding_mask = create_padding_mask(tar)
     combined_mask = tf.maximum(dec_target_padding_mask, look_ahead_mask)
