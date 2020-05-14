@@ -268,19 +268,19 @@ class Transformer(tf.keras.Model):
 
         self.final_layer = tf.keras.layers.Dense(target_vocab_size)
 
+    def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
-        self.compile()
-        self.train_step(np.zeros((1, maximum_position_encoding_input), dtype=int),
-                        np.zeros((1, maximum_position_encoding_target), dtype=int))
+        self.train_step(np.ones((1, input_maxlen), dtype=int),
+                        np.ones((1, output_maxlen), dtype=int))
 
-    def call(self, inp, tar, training, enc_padding_mask, look_ahead_mask, dec_padding_mask):
+    def call(self, x, y, training, enc_padding_mask, look_ahead_mask, dec_padding_mask):
 
-        enc_output = self.encoder(inp, training, enc_padding_mask)  # (batch_size, inp_seq_len, d_model)
+        enc_output = self.encoder(x, training, enc_padding_mask)  # (batch_size, x_seq_len, d_model)
         
-        # dec_output.shape == (batch_size, tar_seq_len, d_model)
-        dec_output, attention_weights = self.decoder(tar, enc_output, training, look_ahead_mask, dec_padding_mask)
+        # dec_output.shape == (batch_size, y_seq_len, d_model)
+        dec_output, attention_weights = self.decoder(y, enc_output, training, look_ahead_mask, dec_padding_mask)
         
-        final_output = self.final_layer(dec_output)  # (batch_size, tar_seq_len, target_vocab_size)
+        final_output = self.final_layer(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
         
         return final_output, attention_weights
 
@@ -290,22 +290,21 @@ class Transformer(tf.keras.Model):
     ]
 
     @tf.function(input_signature=train_step_signature)
-    def train_step(self, inp, tar):
-        tar_inp = tar[:, :-1]
-        tar_real = tar[:, 1:]
+    def train_step(self, x, y):
+        y_input = y[:, :-1]
+        y_real = y[:, 1:]
         
-        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(inp, tar_inp)
+        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(x, y_input)
         
         with tf.GradientTape() as tape:
-            predictions, _ = self(inp, tar_inp, True, enc_padding_mask, combined_mask, dec_padding_mask)
-            loss = loss_function(tar_real, predictions)
+            predictions, _ = self(x, y_input, True, enc_padding_mask, combined_mask, dec_padding_mask)
+            loss = loss_function(y_real, predictions)
 
         gradients = tape.gradient(loss, self.trainable_variables)    
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         
         return {"loss": train_loss(loss),
-                "acc":  train_accuracy(tar_real, predictions) }
-
+                "acc":  train_accuracy(y_real, predictions) }
 
     def test_step(self, data):
         data_adapter = tf.python.keras.engine.data_adapter
@@ -374,18 +373,18 @@ def create_padding_mask(seq):
     return seq[:, tf.newaxis, tf.newaxis, :]  # (batch_size, 1, 1, seq_len)
 
 
-def create_masks(inp, tar):
+def create_masks(x, y):
     # Encoder padding mask
-    enc_padding_mask = create_padding_mask(inp)
+    enc_padding_mask = create_padding_mask(x)
     
     # Used in the 2nd attention block in the decoder.
     # This padding mask is used to mask the encoder outputs.
-    dec_padding_mask = create_padding_mask(inp)
+    dec_padding_mask = create_padding_mask(x)
     
     # Used in the 1st attention block in the decoder.
     # It is used to pad and mask future tokens in the input received by the decoder.
-    look_ahead_mask = create_look_ahead_mask(tf.shape(tar)[1])
-    dec_target_padding_mask = create_padding_mask(tar)
+    look_ahead_mask = create_look_ahead_mask(tf.shape(y)[1])
+    dec_target_padding_mask = create_padding_mask(y)
     combined_mask = tf.maximum(dec_target_padding_mask, look_ahead_mask)
     
     return enc_padding_mask, combined_mask, dec_padding_mask
