@@ -26,11 +26,6 @@ def positional_encoding(position, d_model):
     return tf.cast(pos_encoding, dtype=tf.float32)
 
 
-def create_look_ahead_mask(size):
-    mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)
-    return mask  # (seq_len, seq_len)
-
-
 def scaled_dot_product_attention(q, k, v, mask):
     """Calculate the attention weights.
     q, k, v must have matching leading dimensions.
@@ -255,6 +250,9 @@ class Decoder(tf.keras.layers.Layer):
         return x, attention_weights
 
 
+loss_tracker = tf.keras.metrics.Mean(name="loss")
+
+
 class Transformer(tf.keras.Model):
     def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size, 
                 target_vocab_size, maximum_position_encoding_input, maximum_position_encoding_target, rate=0.1):
@@ -291,20 +289,21 @@ class Transformer(tf.keras.Model):
 
     @tf.function(input_signature=train_step_signature)
     def train_step(self, x, y):
-        y_input = y[:, :-1]
-        y_real = y[:, 1:]
         
-        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(x, y_input)
+        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(x, y)
         
         with tf.GradientTape() as tape:
-            predictions, _ = self(x, y_input, True, enc_padding_mask, combined_mask, dec_padding_mask)
-            loss = loss_function(y_real, predictions)
+            y_pred, _ = self(x, y, True, enc_padding_mask, combined_mask, dec_padding_mask)
+            loss = self.compiled_loss(y, y_pred)
 
         gradients = tape.gradient(loss, self.trainable_variables)    
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        
-        return {"loss": train_loss(loss),
-                "acc":  train_accuracy(y_real, predictions) }
+
+        self.compiled_metrics.update_state(y, y_pred)
+
+        return {# "loss": loss_tracker(loss),
+                "predictions": y_pred,
+                **{m.name: m.result() for m in self.metrics}}
 
     def test_step(self, data):
         data_adapter = tf.python.keras.engine.data_adapter
@@ -312,7 +311,6 @@ class Transformer(tf.keras.Model):
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         
         y_pred = tf.expand_dims([], 0)
-            
 
         for i in range(x.shape[1]):
         
@@ -327,7 +325,7 @@ class Transformer(tf.keras.Model):
             
             y_pred = tf.concat([y_pred, predicted_id], axis=-1)
 
-        loss = loss_function(y, predictions)
+        loss = masked_loss(y, predictions)
 
         # res = tf.squeeze(output, axis=0), attention_weights
         
@@ -348,21 +346,23 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         
         return tf.math.rsqrt(self.d_model) * tf.math.minimum(arg1, arg2)
 
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
+
+def masked_loss(real, pred):
+    loss = tf.keras.losses.sparse_categorical_crossentropy(real, pred, from_logits=True)
+
+    mask = tf.cast(tf.math.logical_not(tf.math.equal(real, 0)), dtype=loss.dtype)
+    loss *= mask
+
+    return tf.reduce_sum(loss) / tf.reduce_sum(mask)
 
 
-def loss_function(real, pred):
-    mask = tf.math.logical_not(tf.math.equal(real, 0))
-    loss_ = loss_object(real, pred)
+def masked_accuracy(real, pred):
+    acc = tf.keras.metrics.sparse_categorical_accuracy(real, pred)
 
-    mask = tf.cast(mask, dtype=loss_.dtype)
-    loss_ *= mask
-    
-    return tf.reduce_sum(loss_) / tf.reduce_sum(mask)
+    mask = tf.cast(tf.math.logical_not(tf.math.equal(real, 0)), dtype=acc.dtype)
+    acc *= mask
 
-
-train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
+    return tf.reduce_sum(acc) / tf.reduce_sum(mask)
 
 
 def create_padding_mask(seq):
@@ -371,6 +371,13 @@ def create_padding_mask(seq):
     # add extra dimensions to add the padding
     # to the attention logits.
     return seq[:, tf.newaxis, tf.newaxis, :]  # (batch_size, 1, 1, seq_len)
+
+
+def create_look_ahead_mask(size):
+    # create a diagonal matrix
+    return tf.linalg.band_part(tf.ones((size, size)), tf.cast(0, size.dtype), size)
+    # tf.constant(np.triu(np.ones(size)), dtype=tf.float32)
+    # return 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)  # (seq_len, seq_len)
 
 
 def create_masks(x, y):
