@@ -268,6 +268,11 @@ class Transformer(tf.keras.Model):
 
         self.final_layer = tf.keras.layers.Dense(target_vocab_size)
 
+        # pseudo "build" step, to allow printing a summary:
+        self.compile()
+        self.train_step(np.zeros((1, maximum_position_encoding_input), dtype=int),
+                        np.zeros((1, maximum_position_encoding_target), dtype=int))
+
     def call(self, inp, tar, training, enc_padding_mask, look_ahead_mask, dec_padding_mask):
 
         enc_output = self.encoder(inp, training, enc_padding_mask)  # (batch_size, inp_seq_len, d_model)
@@ -300,6 +305,36 @@ class Transformer(tf.keras.Model):
         
         return {"loss": train_loss(loss),
                 "acc":  train_accuracy(tar_real, predictions) }
+
+
+    def test_step(self, data):
+        data_adapter = tf.python.keras.engine.data_adapter
+        data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        
+        y_pred = tf.expand_dims([], 0)
+            
+
+        for i in range(x.shape[1]):
+        
+            enc_padding_mask, look_ahead_mask, dec_padding_mask = create_masks(x, y_pred)
+            # predictions.shape == (batch_size, seq_len, vocab_size)
+            predictions, attention_weights = self(x, y_pred, training=False)
+            
+            # select the last word from the seq_len dimension
+            predictions = predictions[: ,-1:, :]  # (batch_size, 1, vocab_size)
+
+            predicted_id = tf.cast(tf.argmax(predictions, axis=-1), tf.int32)
+            
+            y_pred = tf.concat([y_pred, predicted_id], axis=-1)
+
+        loss = loss_function(y, predictions)
+
+        # res = tf.squeeze(output, axis=0), attention_weights
+        
+        self.compiled_metrics.update_state(y, y_pred, sample_weight)
+
+        return {m.name: m.result() for m in self.metrics}
 
 
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
