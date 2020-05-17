@@ -265,11 +265,11 @@ class Transformer(tf.keras.Model):
                             target_vocab_size, maximum_position_encoding_target, rate)
 
         self.final_layer = tf.keras.layers.Dense(target_vocab_size)
+        self.softmax = tf.keras.layers.Softmax()
 
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
-        self.train_step(np.ones((1, input_maxlen), dtype=int),
-                        np.ones((1, output_maxlen), dtype=int))
+        return self.train_step(np.ones((1, input_maxlen), dtype=int), np.ones((1, output_maxlen), dtype=int))
 
     def call(self, x, y, training, enc_padding_mask, look_ahead_mask, dec_padding_mask):
 
@@ -278,8 +278,8 @@ class Transformer(tf.keras.Model):
         # dec_output.shape == (batch_size, y_seq_len, d_model)
         dec_output, attention_weights = self.decoder(y, enc_output, training, look_ahead_mask, dec_padding_mask)
         
-        final_output = self.final_layer(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
-        
+        linear = self.final_layer(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
+        final_output = self.softmax(linear)
         return final_output, attention_weights
 
     train_step_signature = [
@@ -347,13 +347,14 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         return tf.math.rsqrt(self.d_model) * tf.math.minimum(arg1, arg2)
 
 
-def masked_loss(real, pred):
-    loss = tf.keras.losses.sparse_categorical_crossentropy(real, pred, from_logits=True)
+class MaskedCategoricalCrossentropy(tf.keras.losses.Loss):
+    def __call__(self, y_true, y_pred, sample_weight=None):
+        loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True)
 
-    mask = tf.cast(tf.math.logical_not(tf.math.equal(real, 0)), dtype=loss.dtype)
-    loss *= mask
+        mask = tf.cast(tf.math.logical_not(tf.math.equal(y_true, 0)), dtype=loss.dtype)
+        loss *= mask
 
-    return tf.reduce_sum(loss) / tf.reduce_sum(mask)
+        return tf.reduce_sum(loss) / tf.reduce_sum(mask)
 
 
 def masked_accuracy(real, pred):
