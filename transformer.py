@@ -52,7 +52,7 @@ def scaled_dot_product_attention(q, k, v, mask):
 
     # add the mask to the scaled tensor.
     if mask is not None:
-        scaled_attention_logits += (mask * -1e9)  
+        scaled_attention_logits += (mask * -1e18)  
 
     # softmax is normalized on the last axis (seq_len_k) so that the scores
     # add up to 1.
@@ -161,12 +161,12 @@ class DecoderLayer(tf.keras.layers.Layer):
         self.dropout3 = tf.keras.layers.Dropout(rate)
         
         
-    def call(self, x, enc_output, training, look_ahead_mask, padding_mask):
+    def call(self, y, enc_output, training, look_ahead_mask, padding_mask):
         # enc_output.shape == (batch_size, input_seq_len, d_model)
 
-        attn1, attn_weights_block1 = self.mha1(x, x, x, look_ahead_mask)  # (batch_size, target_seq_len, d_model)
+        attn1, attn_weights_block1 = self.mha1(y, y, y, look_ahead_mask)  # (batch_size, target_seq_len, d_model)
         attn1 = self.dropout1(attn1, training=training)
-        out1 = self.layernorm1(attn1 + x)
+        out1 = self.layernorm1(attn1 + y)
 
         attn2, attn_weights_block2 = self.mha2(enc_output, enc_output, out1, padding_mask)  # (batch_size, target_seq_len, d_model)
         attn2 = self.dropout2(attn2, training=training)
@@ -227,27 +227,27 @@ class Decoder(tf.keras.layers.Layer):
         self.dec_layers = [DecoderLayer(d_model, num_heads, dff, rate) for _ in range(num_layers)]
         self.dropout = tf.keras.layers.Dropout(rate)
         
-    def call(self, x, enc_output, training, 
+    def call(self, y, enc_output, training, 
             look_ahead_mask, padding_mask):
 
-        seq_len = tf.shape(x)[1]
+        seq_len = tf.shape(y)[1]
         attention_weights = {}
         
-        x = self.embedding(x)  # (batch_size, target_seq_len, d_model)
-        x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
-        x += self.pos_encoding[:, :seq_len, :]
+        y = self.embedding(y)  # (batch_size, target_seq_len, d_model)
+        y *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
+        y += self.pos_encoding[:, :seq_len, :]
         
-        x = self.dropout(x, training=training)
+        y = self.dropout(y, training=training)
 
         for i in range(self.num_layers):
-            x, block1, block2 = self.dec_layers[i](x, enc_output, training,
+            y, block1, block2 = self.dec_layers[i](y, enc_output, training,
                                                     look_ahead_mask, padding_mask)
             
             attention_weights['decoder_layer{}_block1'.format(i+1)] = block1
             attention_weights['decoder_layer{}_block2'.format(i+1)] = block2
         
         # x.shape == (batch_size, target_seq_len, d_model)
-        return x, attention_weights
+        return y, attention_weights
 
 
 loss_tracker = tf.keras.metrics.Mean(name="loss")
@@ -264,7 +264,7 @@ class Transformer(tf.keras.Model):
         self.decoder = Decoder(num_layers, d_model, num_heads, dff, 
                             target_vocab_size, maximum_position_encoding_target, rate)
 
-        self.final_layer = tf.keras.layers.Dense(target_vocab_size)
+        self.dense = tf.keras.layers.Dense(target_vocab_size)
         self.softmax = tf.keras.layers.Softmax()
 
     def pseudo_build(self, input_maxlen, output_maxlen):
@@ -278,8 +278,8 @@ class Transformer(tf.keras.Model):
         # dec_output.shape == (batch_size, y_seq_len, d_model)
         dec_output, attention_weights = self.decoder(y, enc_output, training, look_ahead_mask, dec_padding_mask)
         
-        linear = self.final_layer(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
-        final_output = self.softmax(linear)
+        dense = self.dense(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
+        final_output = self.softmax(dense)
         return final_output, attention_weights
 
     train_step_signature = [
@@ -291,9 +291,10 @@ class Transformer(tf.keras.Model):
     def train_step(self, x, y):
         
         enc_padding_mask, combined_mask, dec_padding_mask = create_masks(x, y)
-        
+        # dont let _any_ input leak: use zeros instead of masked y
+        zeros = y * 0
         with tf.GradientTape() as tape:
-            y_pred, _ = self(x, y, True, enc_padding_mask, combined_mask, dec_padding_mask)
+            y_pred, _ = self(x, zeros, True, enc_padding_mask, combined_mask, dec_padding_mask)
             loss = self.compiled_loss(y, y_pred)
 
         gradients = tape.gradient(loss, self.trainable_variables)    
@@ -301,9 +302,7 @@ class Transformer(tf.keras.Model):
 
         self.compiled_metrics.update_state(y, y_pred)
 
-        return {# "loss": loss_tracker(loss),
-                "predictions": y_pred,
-                **{m.name: m.result() for m in self.metrics}}
+        return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, data):
         data_adapter = tf.python.keras.engine.data_adapter
