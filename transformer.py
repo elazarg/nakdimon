@@ -283,10 +283,13 @@ class Transformer(tf.keras.Model):
 
         self.dense = tf.keras.layers.Dense(target_vocab_size)
         self.softmax = tf.keras.layers.Softmax()
+        self.masked_loss = MaskedCategoricalCrossentropy()
 
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
-        return self.train_step(np.ones((1, input_maxlen), dtype=int), [0] + np.ones((1, output_maxlen), dtype=int))
+        x = np.ones((1, input_maxlen), dtype=int)
+        y = np.ones((1, output_maxlen+1), dtype=int)
+        return self.train_step(x, y)
 
     def call(self, x, y, training, dec_target_padding_mask, padding_mask):
         enc_output = self.encoder(x, training, padding_mask)  # (batch_size, x_seq_len, d_model)
@@ -320,6 +323,24 @@ class Transformer(tf.keras.Model):
 
         self.compiled_metrics.update_state(y, y_pred)
 
+        return {m.name: m.result() for m in self.metrics}
+
+
+    def test_step(self, x, y, sample_weight=None):
+        y_pred = np.ones(x.shape, dtype=int)
+        y = y[:, 1:]
+
+        padding_mask = create_padding_mask(x)
+        dec_target_padding_mask = create_padding_mask(x)
+        for i in range(y_pred.shape[-1]):
+            predictions, _ = self(x, y_pred, False, dec_target_padding_mask, padding_mask)
+            predicted_id = tf.argmax(predictions, axis=-1)
+            y_pred[:, i] = predicted_id.numpy()[:, i]
+
+        # Updates stateful loss metrics.
+        self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
+
+        self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
 
