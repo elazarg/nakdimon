@@ -26,7 +26,17 @@ def positional_encoding(position, d_model):
     return tf.cast(pos_encoding, dtype=tf.float32)
 
 
-def scaled_dot_product_attention(q, k, v, mask):
+def create_look_ahead_mask(size):
+    """create a diagonal matrix"""
+    mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)
+    # mask = tf.maximum(tf.eye(size), mask)
+    return mask  # (seq_len, seq_len)
+    # return tf.linalg.band_part(tf.ones((size, size)), tf.cast(0, size.dtype), size)
+    # tf.constant(np.triu(np.ones(size)), dtype=tf.float32)
+    # return 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)  # (seq_len, seq_len)
+
+
+def scaled_dot_product_attention(q, k, v, mask=None, causal=False):
     """Calculate the attention weights.
     q, k, v must have matching leading dimensions.
     k, v must have matching penultimate dimension, i.e.: seq_len_k = seq_len_v.
@@ -43,28 +53,36 @@ def scaled_dot_product_attention(q, k, v, mask):
     Returns:
         output, attention_weights
     """
-
     matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
-    
+
     # scale matmul_qk
     dk = tf.cast(tf.shape(k)[-1], tf.float32)
     scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
 
-    # add the mask to the scaled tensor.
-    if mask is not None:
-        scaled_attention_logits += (mask * -1e18)  
+    if causal:
+        size = tf.shape(k)[-2]
+        look_ahead_mask = create_look_ahead_mask(size)
+        if mask is None:
+            mask = look_ahead_mask
+        else:
+            mask = tf.maximum(mask, look_ahead_mask)
 
-    # softmax is normalized on the last axis (seq_len_k) so that the scores
-    # add up to 1.
+    if mask is not None:
+        scaled_attention_logits += (mask * -1e17)
+    
     attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)  # (..., seq_len_q, seq_len_k)
 
+    # if causal:
+    #     # This fixes the first row, since softmax gives all the (very small) values similar probability
+    #     attention_weights *= 1 - look_ahead_mask
+    
     output = tf.matmul(attention_weights, v)  # (..., seq_len_q, depth_v)
 
     return output, attention_weights
 
 
 class MultiHeadAttention(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model, num_heads, causal=False):
         super().__init__()
         self.num_heads = num_heads
         self.d_model = d_model
@@ -78,6 +96,8 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         self.wv = tf.keras.layers.Dense(d_model)
         
         self.dense = tf.keras.layers.Dense(d_model)
+
+        self.causal = causal
             
     def split_heads(self, x, batch_size):
         """Split the last dimension into (num_heads, depth).
@@ -99,7 +119,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         
         # scaled_attention.shape == (batch_size, num_heads, seq_len_q, depth)
         # attention_weights.shape == (batch_size, num_heads, seq_len_q, seq_len_k)
-        scaled_attention, attention_weights = scaled_dot_product_attention(q, k, v, mask)
+        scaled_attention, attention_weights = scaled_dot_product_attention(q, k, v, mask, self.causal)
         
         scaled_attention = tf.transpose(scaled_attention, perm=[0, 2, 1, 3])  # (batch_size, seq_len_q, num_heads, depth)
 
@@ -143,42 +163,6 @@ class EncoderLayer(tf.keras.layers.Layer):
         return out2
 
 
-class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads, dff, rate=0.1):
-        super().__init__()
-
-        self.mha1 = MultiHeadAttention(d_model, num_heads)
-        self.mha2 = MultiHeadAttention(d_model, num_heads)
-
-        self.ffn = pointwise_feed_forward_network(d_model, dff)
-    
-        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.layernorm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        
-        self.dropout1 = tf.keras.layers.Dropout(rate)
-        self.dropout2 = tf.keras.layers.Dropout(rate)
-        self.dropout3 = tf.keras.layers.Dropout(rate)
-        
-        
-    def call(self, y, enc_output, training, look_ahead_mask, padding_mask):
-        # enc_output.shape == (batch_size, input_seq_len, d_model)
-
-        attn1, attn_weights_block1 = self.mha1(y, y, y, look_ahead_mask)  # (batch_size, target_seq_len, d_model)
-        attn1 = self.dropout1(attn1, training=training)
-        out1 = self.layernorm1(attn1 + y)
-
-        attn2, attn_weights_block2 = self.mha2(enc_output, enc_output, out1, padding_mask)  # (batch_size, target_seq_len, d_model)
-        attn2 = self.dropout2(attn2, training=training)
-        out2 = self.layernorm2(attn2 + out1)  # (batch_size, target_seq_len, d_model)
-
-        ffn_output = self.ffn(out2)  # (batch_size, target_seq_len, d_model)
-        ffn_output = self.dropout3(ffn_output, training=training)
-        out3 = self.layernorm3(ffn_output + out2)  # (batch_size, target_seq_len, d_model)
-
-        return out3, attn_weights_block1, attn_weights_block2
-
-
 class Encoder(tf.keras.layers.Layer):
     def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size,
                 maximum_position_encoding, rate=0.1):
@@ -188,9 +172,7 @@ class Encoder(tf.keras.layers.Layer):
         self.num_layers = num_layers
         
         self.embedding = tf.keras.layers.Embedding(input_vocab_size, d_model)
-        self.pos_encoding = positional_encoding(maximum_position_encoding, 
-                                                self.d_model)
-        
+        self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model)
         
         self.enc_layers = [EncoderLayer(d_model, num_heads, dff, rate) for _ in range(num_layers)]
     
@@ -213,9 +195,46 @@ class Encoder(tf.keras.layers.Layer):
         return x  # (batch_size, input_seq_len, d_model)
 
 
+class DecoderLayer(tf.keras.layers.Layer):
+    def __init__(self, d_model, num_heads, dff, rate=0.1):
+        super().__init__()
+
+        self.mha1 = MultiHeadAttention(d_model, num_heads, causal=True)
+        self.mha2 = MultiHeadAttention(d_model, num_heads, causal=False)
+
+        self.ffn = pointwise_feed_forward_network(d_model, dff)
+    
+        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        self.layernorm3 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+        
+        self.dropout1 = tf.keras.layers.Dropout(rate)
+        self.dropout2 = tf.keras.layers.Dropout(rate)
+        self.dropout3 = tf.keras.layers.Dropout(rate)
+        
+        
+    def call(self, y, enc_output, training, dec_target_padding_mask, padding_mask):
+        # enc_output.shape == (batch_size, input_seq_len, d_model)
+
+        attn1, attn_weights_block1 = self.mha1(y, y, y, dec_target_padding_mask)  # (batch_size, target_seq_len, d_model)
+        
+        attn1 = self.dropout1(attn1, training=training)
+        out1 = self.layernorm1(attn1 + y)  #  ! attn1 + y is a leak?
+
+        attn2, attn_weights_block2 = self.mha2(enc_output, enc_output, out1, padding_mask)  # (batch_size, target_seq_len, d_model)
+        attn2 = self.dropout2(attn2, training=training)
+        out2 = self.layernorm2(attn2 + out1)  # (batch_size, target_seq_len, d_model)
+
+        ffn_output = self.ffn(out2)  # (batch_size, target_seq_len, d_model)
+        ffn_output = self.dropout3(ffn_output, training=training)
+        out3 = self.layernorm3(ffn_output + out2)  # (batch_size, target_seq_len, d_model)
+
+        return out3, attn_weights_block1, attn_weights_block2
+
+
 class Decoder(tf.keras.layers.Layer):
     def __init__(self, num_layers, d_model, num_heads, dff, target_vocab_size,
-                maximum_position_encoding, rate=0.1):
+                 maximum_position_encoding, rate=0.1):
         super().__init__()
 
         self.d_model = d_model
@@ -227,8 +246,7 @@ class Decoder(tf.keras.layers.Layer):
         self.dec_layers = [DecoderLayer(d_model, num_heads, dff, rate) for _ in range(num_layers)]
         self.dropout = tf.keras.layers.Dropout(rate)
         
-    def call(self, y, enc_output, training, 
-            look_ahead_mask, padding_mask):
+    def call(self, y, enc_output, training, dec_target_padding_mask, padding_mask):
 
         seq_len = tf.shape(y)[1]
         attention_weights = {}
@@ -240,8 +258,7 @@ class Decoder(tf.keras.layers.Layer):
         y = self.dropout(y, training=training)
 
         for i in range(self.num_layers):
-            y, block1, block2 = self.dec_layers[i](y, enc_output, training,
-                                                    look_ahead_mask, padding_mask)
+            y, block1, block2 = self.dec_layers[i](y, enc_output, training, dec_target_padding_mask, padding_mask)
             
             attention_weights['decoder_layer{}_block1'.format(i+1)] = block1
             attention_weights['decoder_layer{}_block2'.format(i+1)] = block2
@@ -259,24 +276,23 @@ class Transformer(tf.keras.Model):
         super().__init__()
 
         self.encoder = Encoder(num_layers, d_model, num_heads, dff, 
-                            input_vocab_size, maximum_position_encoding_input, rate)
+                               input_vocab_size, maximum_position_encoding_input, rate)
 
         self.decoder = Decoder(num_layers, d_model, num_heads, dff, 
-                            target_vocab_size, maximum_position_encoding_target, rate)
+                              target_vocab_size, maximum_position_encoding_target, rate)
 
         self.dense = tf.keras.layers.Dense(target_vocab_size)
         self.softmax = tf.keras.layers.Softmax()
 
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
-        return self.train_step(np.ones((1, input_maxlen), dtype=int), np.ones((1, output_maxlen), dtype=int))
+        return self.train_step(np.ones((1, input_maxlen), dtype=int), [0] + np.ones((1, output_maxlen), dtype=int))
 
-    def call(self, x, y, training, enc_padding_mask, look_ahead_mask, dec_padding_mask):
-
-        enc_output = self.encoder(x, training, enc_padding_mask)  # (batch_size, x_seq_len, d_model)
+    def call(self, x, y, training, dec_target_padding_mask, padding_mask):
+        enc_output = self.encoder(x, training, padding_mask)  # (batch_size, x_seq_len, d_model)
         
         # dec_output.shape == (batch_size, y_seq_len, d_model)
-        dec_output, attention_weights = self.decoder(y, enc_output, training, look_ahead_mask, dec_padding_mask)
+        dec_output, attention_weights = self.decoder(y, enc_output, training, dec_target_padding_mask, padding_mask)
         
         dense = self.dense(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
         final_output = self.softmax(dense)
@@ -289,46 +305,20 @@ class Transformer(tf.keras.Model):
 
     @tf.function(input_signature=train_step_signature)
     def train_step(self, x, y):
-        
-        enc_padding_mask, combined_mask, dec_padding_mask = create_masks(x, y)
-        # dont let _any_ input leak: use zeros instead of masked y
-        zeros = y * 0
+        y_inp = y[:, :-1]
+        y = y[:, 1:]
+
+        padding_mask = create_padding_mask(x)
+        dec_target_padding_mask = create_padding_mask(y_inp)
+
         with tf.GradientTape() as tape:
-            y_pred, _ = self(x, zeros, True, enc_padding_mask, combined_mask, dec_padding_mask)
+            y_pred, _ = self(x, y_inp, True, dec_target_padding_mask, padding_mask)
             loss = self.compiled_loss(y, y_pred)
 
         gradients = tape.gradient(loss, self.trainable_variables)    
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
         self.compiled_metrics.update_state(y, y_pred)
-
-        return {m.name: m.result() for m in self.metrics}
-
-    def test_step(self, data):
-        data_adapter = tf.python.keras.engine.data_adapter
-        data = data_adapter.expand_1d(data)
-        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
-        
-        y_pred = tf.expand_dims([], 0)
-
-        for i in range(x.shape[1]):
-        
-            enc_padding_mask, look_ahead_mask, dec_padding_mask = create_masks(x, y_pred)
-            # predictions.shape == (batch_size, seq_len, vocab_size)
-            predictions, attention_weights = self(x, y_pred, training=False)
-            
-            # select the last word from the seq_len dimension
-            predictions = predictions[: ,-1:, :]  # (batch_size, 1, vocab_size)
-
-            predicted_id = tf.cast(tf.argmax(predictions, axis=-1), tf.int32)
-            
-            y_pred = tf.concat([y_pred, predicted_id], axis=-1)
-
-        loss = masked_loss(y, predictions)
-
-        # res = tf.squeeze(output, axis=0), attention_weights
-        
-        self.compiled_metrics.update_state(y, y_pred, sample_weight)
 
         return {m.name: m.result() for m in self.metrics}
 
@@ -348,7 +338,7 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
 
 class MaskedCategoricalCrossentropy(tf.keras.losses.Loss):
     def __call__(self, y_true, y_pred, sample_weight=None):
-        loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True)
+        loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred)
 
         mask = tf.cast(tf.math.logical_not(tf.math.equal(y_true, 0)), dtype=loss.dtype)
         loss *= mask
@@ -367,31 +357,5 @@ def masked_accuracy(real, pred):
 
 def create_padding_mask(seq):
     seq = tf.cast(tf.math.equal(seq, 0), tf.float32)
-    
-    # add extra dimensions to add the padding
-    # to the attention logits.
+    # add extra dimensions to add the padding to the attention logits.
     return seq[:, tf.newaxis, tf.newaxis, :]  # (batch_size, 1, 1, seq_len)
-
-
-def create_look_ahead_mask(size):
-    # create a diagonal matrix
-    return tf.linalg.band_part(tf.ones((size, size)), tf.cast(0, size.dtype), size)
-    # tf.constant(np.triu(np.ones(size)), dtype=tf.float32)
-    # return 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)  # (seq_len, seq_len)
-
-
-def create_masks(x, y):
-    # Encoder padding mask
-    enc_padding_mask = create_padding_mask(x)
-    
-    # Used in the 2nd attention block in the decoder.
-    # This padding mask is used to mask the encoder outputs.
-    dec_padding_mask = create_padding_mask(x)
-    
-    # Used in the 1st attention block in the decoder.
-    # It is used to pad and mask future tokens in the input received by the decoder.
-    look_ahead_mask = create_look_ahead_mask(tf.shape(y)[1])
-    dec_target_padding_mask = create_padding_mask(y)
-    combined_mask = tf.maximum(dec_target_padding_mask, look_ahead_mask)
-    
-    return enc_padding_mask, combined_mask, dec_padding_mask
