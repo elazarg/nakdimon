@@ -330,12 +330,11 @@ class Transformer(tf.keras.Model):
 
         return {m.name: m.result() for m in self.metrics}
 
+    # named "predict probs" instead of "predict" because tf does not allow to use that name
+    # when `call` receives output as argument
 
-    @tf.function()  # input_signature=train_step_signature)
-    def test_step(self, x, y_niqqud, y_dagesh, y_sin, sample_weight=None):
-        # x: (batch_size, maxlen)
-        ys = [y_niqqud, y_dagesh, y_sin]
-
+    # @tf.function()
+    def predict_probs(self, x):
         batch_len, timesteps = x.shape
 
         # we "know" that the first item is the start item
@@ -358,12 +357,22 @@ class Transformer(tf.keras.Model):
 
         # remove "start of" padding token
         y_probs = [prob[:, 1:, :] for prob in y_probs]
+        return y_probs
 
+    @tf.function()  # input_signature=train_step_signature)
+    def test_step(self, x, y_niqqud, y_dagesh, y_sin, sample_weight=None):
+        y_probs = self.predict_probs(x)
+
+        ys = [y_niqqud, y_dagesh, y_sin]
         # Updates stateful loss metrics
         self.compiled_loss(ys, y_probs)
         self.compiled_metrics.update_state(ys, y_probs)
 
         return {f'val_{m.name}' : m.result() for m in self.metrics}
+
+    def predict_argmax(self, x):
+        y_probs = self.predict_probs(x)
+        return [tf.cast(tf.argmax(y, axis=-1), tf.int32).numpy() for y in y_probs]
 
 
 def make_start_prob(target_vocab_size, batch_len):
