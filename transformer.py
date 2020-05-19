@@ -229,30 +229,31 @@ class DecoderLayer(tf.keras.layers.Layer):
 
 
 class Decoder(tf.keras.layers.Layer):
-    def __init__(self, num_layers, d_model, num_heads, dff, target_vocab_size,
+    def __init__(self, num_layers, d_model, num_heads, dff, sizes,
                  maximum_position_encoding, rate=0.1):
         super().__init__()
 
         self.d_model = d_model
         self.num_layers = num_layers
         
-        self.embedding = tf.keras.layers.Embedding(target_vocab_size, d_model)
+        self.embeddings = [tf.keras.layers.Embedding(size, d_model) for size in sizes]
+
         self.pos_encoding = positional_encoding(maximum_position_encoding, d_model)
         
         self.dec_layers = [DecoderLayer(d_model, num_heads, dff, rate) for _ in range(num_layers)]
         self.dropout = tf.keras.layers.Dropout(rate)
         
-    def call(self, y, enc_output, training, dec_target_padding_mask, padding_mask):
+    def call(self, ys, enc_output, training, dec_target_padding_mask, padding_mask):
 
-        seq_len = tf.shape(y)[1]
-        attention_weights = {}
+        seq_len = tf.shape(ys[0])[1]
         
-        y = self.embedding(y)  # (batch_size, target_seq_len, d_model)
+        y = tf.keras.layers.add([emb(y) for emb, y in zip(self.embeddings, ys)]) # (batch_size, target_seq_len, d_model)
         y *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         y += self.pos_encoding[:, :seq_len, :]
         
         y = self.dropout(y, training=training)
 
+        attention_weights = {}
         for i in range(self.num_layers):
             y, block1, block2 = self.dec_layers[i](y, enc_output, training, dec_target_padding_mask, padding_mask)
             
@@ -263,78 +264,82 @@ class Decoder(tf.keras.layers.Layer):
         return y, attention_weights
 
 
-loss_tracker = tf.keras.metrics.Mean(name="loss")
-
-
 class Transformer(tf.keras.Model):
-    def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size, 
-                target_vocab_size, maximum_position_encoding_input, maximum_position_encoding_target, rate=0.1):
+    def __init__(self, *, num_layers, d_model, num_heads, dff, input_vocab_size, 
+                 output_sizes,
+                 maximum_position_encoding_input, maximum_position_encoding_target, rate=0.1):
         super().__init__()
 
         self.encoder = Encoder(num_layers, d_model, num_heads, dff, 
                                input_vocab_size, maximum_position_encoding_input, rate)
 
         self.decoder = Decoder(num_layers, d_model, num_heads, dff, 
-                              target_vocab_size, maximum_position_encoding_target, rate)
+                               output_sizes, maximum_position_encoding_target, rate)
 
-        self.dense = tf.keras.layers.Dense(target_vocab_size)
-        self.softmax = tf.keras.layers.Softmax()
         self.masked_loss = MaskedCategoricalCrossentropy()
-        self.target_vocab_size = target_vocab_size
-        self.maxlen = maximum_position_encoding_target
+
+        self.softmax_dense_list = [(tf.keras.layers.Softmax(), tf.keras.layers.Dense(size)) for size in output_sizes]
+
+        self.output_sizes = output_sizes
+
 
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
-        x = np.ones((1, input_maxlen), dtype=int)
-        y = np.ones((1, output_maxlen), dtype=int)
-        return self.train_step(x, y)
+        x = np.ones((2, input_maxlen), dtype=int)
+        y_n = np.ones((2, output_maxlen), dtype=int)
+        y_d = np.ones((2, output_maxlen), dtype=int)
+        y_s = np.ones((2, output_maxlen), dtype=int)
+        return self.train_step(x, y_n, y_d, y_s)
 
-    def call(self, x, y, training, dec_target_padding_mask, padding_mask):
+    def call(self, x, ys, training, dec_target_padding_mask, padding_mask):
         enc_output = self.encoder(x, training, padding_mask)  # (batch_size, x_seq_len, d_model)
         
         # dec_output.shape == (batch_size, y_seq_len, d_model)
-        dec_output, attention_weights = self.decoder(y, enc_output, training, dec_target_padding_mask, padding_mask)
+        dec_output, attention_weights = self.decoder(ys, enc_output, training, dec_target_padding_mask, padding_mask)
         
-        dense = self.dense(dec_output)  # (batch_size, y_seq_len, target_vocab_size)
-        final_output = self.softmax(dense)
-        return final_output, attention_weights
+        out = [softmax(dense(dec_output)) for softmax, dense in self.softmax_dense_list]
+        return out, attention_weights
 
     train_step_signature = [
+        tf.TensorSpec(shape=(None, None), dtype=tf.int64),
+        tf.TensorSpec(shape=(None, None), dtype=tf.int64),
         tf.TensorSpec(shape=(None, None), dtype=tf.int64),
         tf.TensorSpec(shape=(None, None), dtype=tf.int64),
     ]
 
     @tf.function(input_signature=train_step_signature)
-    def train_step(self, x, y):
+    def train_step(self, x, y_niqqud, y_dagesh, y_sin):
+        # x: (batch_size, maxlen)
+        ys = [y_niqqud, y_dagesh, y_sin]
+
         # add start token and remove last one
-        
-        y_inp = tf.pad(y, [[0, 0], [1, 0]], "CONSTANT", constant_values=1)[:, :-1]
-        # y_inp = y[:, :-1]
-        # y = y[:, 1:]
+        y_inp = [tf.pad(y, [[0, 0], [1, 0]], "CONSTANT", constant_values=1)[:, :-1]
+                 for y in ys]
 
         padding_mask = create_padding_mask(x)
-        dec_target_padding_mask = create_padding_mask(y_inp)
+        dec_target_padding_mask = create_padding_mask(y_inp[0])  # arbitrary
 
         with tf.GradientTape() as tape:
-            y_pred, _ = self(x, y_inp, True, dec_target_padding_mask, padding_mask)
-            loss = self.compiled_loss(y, y_pred)
+            y_preds, _ = self(x, y_inp, True, dec_target_padding_mask, padding_mask)
+            loss = sum(self.compiled_loss(y, y_pred) for y, y_pred in zip(ys, y_preds))
 
         gradients = tape.gradient(loss, self.trainable_variables)    
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        self.compiled_metrics.update_state(y, y_pred)
+        self.compiled_metrics.update_state(ys, y_preds)
 
         return {m.name: m.result() for m in self.metrics}
 
 
     @tf.function()  # input_signature=train_step_signature)
-    def test_step(self, x, y, sample_weight=None):
+    def test_step(self, x, y_niqqud, y_dagesh, y_sin, sample_weight=None):
+        # x: (batch_size, maxlen)
+        ys = [y_niqqud, y_dagesh, y_sin]
+
         batch_len, timesteps = x.shape
 
         # we "know" that the first item is the start item
-        y_probs = np.array([[[0] * self.target_vocab_size]] * batch_len)
-        y_probs[:, 0, 1] = 1
-        y_probs = tf.constant(y_probs, tf.float32)
+        y_probs = [make_start_prob(size, batch_len) for size in self.output_sizes]
 
         padding_mask = create_padding_mask(x)
         dec_target_padding_mask = create_padding_mask(x)
@@ -343,21 +348,28 @@ class Transformer(tf.keras.Model):
 
         for i in range(timesteps):
             # Maybe this can be avoided by controlling the size of the output as in translation
-            y_pred = tf.cast(tf.argmax(y_probs, axis=-1), tf.int32)
-            y_pred = tf.concat([y_pred, invisible_future[:, i+1:]], axis=-1)
+            y_preds = [tf.concat([
+                         tf.cast(tf.argmax(prob, axis=-1), tf.int32),
+                         invisible_future[:, i+1:]
+                       ], axis=-1) for prob in y_probs]
                 
-            predictions, _ = self(x, y_pred, False, dec_target_padding_mask, padding_mask)
-            predictions = predictions[: ,i:i+1, :]
-            y_probs = tf.concat([y_probs, predictions], axis=1)
+            predictions, _ = self(x, y_preds, False, dec_target_padding_mask, padding_mask)
+            y_probs = [tf.concat([prob, pred[: ,i:i+1, :]], axis=1) for prob, pred in zip(y_probs, predictions)]
 
         # remove "start of" padding token
-        y_probs = y_probs[:, 1:, :]
+        y_probs = [prob[:, 1:, :] for prob in y_probs]
 
         # Updates stateful loss metrics
-        self.compiled_loss(y, y_probs)
-        self.compiled_metrics.update_state(y, y_probs)
+        self.compiled_loss(ys, y_probs)
+        self.compiled_metrics.update_state(ys, y_probs)
 
         return {f'val_{m.name}' : m.result() for m in self.metrics}
+
+
+def make_start_prob(target_vocab_size, batch_len):
+    y_probs = np.array([[[0] * target_vocab_size]] * batch_len)
+    y_probs[:, 0, 1] = 1
+    return tf.constant(y_probs, tf.float32)
 
 
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
