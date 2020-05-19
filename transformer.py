@@ -290,7 +290,7 @@ class Transformer(tf.keras.Model):
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
         x = np.ones((1, input_maxlen), dtype=int)
-        y = np.ones((1, output_maxlen+1), dtype=int)
+        y = np.ones((1, output_maxlen), dtype=int)
         return self.train_step(x, y)
 
     def call(self, x, y, training, dec_target_padding_mask, padding_mask):
@@ -310,8 +310,11 @@ class Transformer(tf.keras.Model):
 
     @tf.function(input_signature=train_step_signature)
     def train_step(self, x, y):
-        y_inp = y[:, :-1]
-        y = y[:, 1:]
+        # add start token and remove last one
+        
+        y_inp = tf.pad(y, [[0, 0], [1, 0]], "CONSTANT", constant_values=1)[:, :-1]
+        # y_inp = y[:, :-1]
+        # y = y[:, 1:]
 
         padding_mask = create_padding_mask(x)
         dec_target_padding_mask = create_padding_mask(y_inp)
