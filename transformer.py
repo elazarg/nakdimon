@@ -326,16 +326,23 @@ class Transformer(tf.keras.Model):
         return {m.name: m.result() for m in self.metrics}
 
 
+    @tf.function()  # input_signature=train_step_signature)
     def test_step(self, x, y, sample_weight=None):
-        y_pred = np.ones(x.shape, dtype=int)
-        y = y[:, 1:]
+        batch_len = x.shape[0]
+        y_pred = tf.ones((batch_len, 1), dtype=tf.int32)
 
         padding_mask = create_padding_mask(x)
         dec_target_padding_mask = create_padding_mask(x)
-        for i in range(y_pred.shape[-1]):
-            predictions, _ = self(x, y_pred, False, dec_target_padding_mask, padding_mask)
-            predicted_id = tf.argmax(predictions, axis=-1)
-            y_pred[:, i] = predicted_id.numpy()[:, i]
+        timesteps = x.shape[-1]
+        for i in range(timesteps):
+            # Maybe this can be avoided by controlling the size of the output as in translation
+            future = tf.ones((batch_len, timesteps - i - 1), dtype=tf.int32)
+            y_augment = tf.concat([y_pred, future], axis=-1)
+                
+            predictions, _ = self(x, y_augment, False, dec_target_padding_mask, padding_mask)
+            predictions = predictions[: ,i:i+1, :]
+            predicted_id = tf.cast(tf.argmax(predictions, axis=-1), tf.int32)
+            y_pred = tf.concat([y_pred, predicted_id], axis=-1)
 
         # Updates stateful loss metrics.
         self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
