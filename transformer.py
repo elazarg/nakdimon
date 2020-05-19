@@ -72,10 +72,6 @@ def scaled_dot_product_attention(q, k, v, mask=None, causal=False):
     
     attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)  # (..., seq_len_q, seq_len_k)
 
-    # if causal:
-    #     # This fixes the first row, since softmax gives all the (very small) values similar probability
-    #     attention_weights *= 1 - look_ahead_mask
-    
     output = tf.matmul(attention_weights, v)  # (..., seq_len_q, depth_v)
 
     return output, attention_weights
@@ -333,24 +329,24 @@ class Transformer(tf.keras.Model):
 
     @tf.function()  # input_signature=train_step_signature)
     def test_step(self, x, y, sample_weight=None):
-        batch_len = x.shape[0]
+        batch_len, timesteps = x.shape
 
         # we "know" that the first item is the start item
-        y_probs = tf.concat([
-            tf.zeros((batch_len, 1, 1), dtype=tf.float32),
-            tf.ones((batch_len, 1, 1), dtype=tf.float32),
-            tf.zeros((batch_len, 1, self.target_vocab_size - 2), dtype=tf.float32)
-        ], axis=-1)
+        y_probs = np.array([[[0] * self.target_vocab_size]] * batch_len)
+        y_probs[:, 0, 1] = 1
+        y_probs = tf.constant(y_probs, tf.float32)
 
         padding_mask = create_padding_mask(x)
         dec_target_padding_mask = create_padding_mask(x)
-        for i in range(self.maxlen):
+        
+        invisible_future = tf.zeros([batch_len, timesteps], dtype=tf.int32)
+
+        for i in range(timesteps):
             # Maybe this can be avoided by controlling the size of the output as in translation
-            future = tf.ones((batch_len, self.maxlen - i - 1), dtype=tf.int32)
             y_pred = tf.cast(tf.argmax(y_probs, axis=-1), tf.int32)
-            y_augment = tf.concat([y_pred, future], axis=-1)
+            y_pred = tf.concat([y_pred, invisible_future[:, i+1:]], axis=-1)
                 
-            predictions, _ = self(x, y_augment, False, dec_target_padding_mask, padding_mask)
+            predictions, _ = self(x, y_pred, False, dec_target_padding_mask, padding_mask)
             predictions = predictions[: ,i:i+1, :]
             y_probs = tf.concat([y_probs, predictions], axis=1)
 
@@ -361,7 +357,7 @@ class Transformer(tf.keras.Model):
         self.compiled_loss(y, y_probs)
         self.compiled_metrics.update_state(y, y_probs)
 
-        return {'val_' + m.name: m.result() for m in self.metrics}
+        return {f'val_{m.name}' : m.result() for m in self.metrics}
 
 
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
