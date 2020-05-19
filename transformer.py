@@ -284,6 +284,8 @@ class Transformer(tf.keras.Model):
         self.dense = tf.keras.layers.Dense(target_vocab_size)
         self.softmax = tf.keras.layers.Softmax()
         self.masked_loss = MaskedCategoricalCrossentropy()
+        self.target_vocab_size = target_vocab_size
+        self.maxlen = maximum_position_encoding_target
 
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
@@ -329,14 +331,19 @@ class Transformer(tf.keras.Model):
     @tf.function()  # input_signature=train_step_signature)
     def test_step(self, x, y, sample_weight=None):
         batch_len = x.shape[0]
-        y_probs = tf.ones((batch_len, 1, 16), dtype=tf.float32)
+
+        # we "know" that the first item is the start item
+        y_probs = tf.concat([
+            tf.zeros((batch_len, 1, 1), dtype=tf.float32),
+            tf.ones((batch_len, 1, 1), dtype=tf.float32),
+            tf.zeros((batch_len, 1, self.target_vocab_size - 2), dtype=tf.float32)
+        ], axis=-1)
 
         padding_mask = create_padding_mask(x)
         dec_target_padding_mask = create_padding_mask(x)
-        timesteps = x.shape[-1]
-        for i in range(timesteps):
+        for i in range(self.maxlen):
             # Maybe this can be avoided by controlling the size of the output as in translation
-            future = tf.ones((batch_len, timesteps - i - 1), dtype=tf.int32)
+            future = tf.ones((batch_len, self.maxlen - i - 1), dtype=tf.int32)
             y_pred = tf.cast(tf.argmax(y_probs, axis=-1), tf.int32)
             y_augment = tf.concat([y_pred, future], axis=-1)
                 
@@ -346,12 +353,12 @@ class Transformer(tf.keras.Model):
 
         # remove "start of" padding token
         y_probs = y_probs[:, 1:, :]
-        
+
         # Updates stateful loss metrics
         self.compiled_loss(y, y_probs)
         self.compiled_metrics.update_state(y, y_probs)
 
-        return {m.name: m.result() for m in self.metrics}
+        return {'val_' + m.name: m.result() for m in self.metrics}
 
 
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
