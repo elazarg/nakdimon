@@ -26,9 +26,11 @@ VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
                  'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת']
 SPECIAL_TOKENS = ['H', 'O', '5']
 
+ENDINGS_TO_REGULAR = dict(zip('ךםןףץ', 'כמנפצ'))
 
 def normalize(c):
     if c in VALID_LETTERS: return c
+    if c in ENDINGS_TO_REGULAR: return ENDINGS_TO_REGULAR(c)
     if c in ['\n', '\t']: return ' '
     if c in ['־', '‒', '–', '—', '―', '−']: return '-'
     if c == '[': return '('
