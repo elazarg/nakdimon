@@ -282,7 +282,6 @@ class Transformer(tf.keras.Model):
 
         self.output_sizes = output_sizes
 
-
     def pseudo_build(self, input_maxlen, output_maxlen):
         # pseudo "build" step, to allow printing a summary:
         x = np.ones((2, input_maxlen), dtype=int)
@@ -412,6 +411,13 @@ def masked_accuracy(real, pred):
 
     return tf.reduce_sum(acc) / tf.reduce_sum(mask)
 
+def masked_categorical_crossentropy(y_true, y_pred, sample_weight=None):
+    loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred)
+
+    mask = tf.cast(tf.math.logical_not(tf.math.equal(y_true, 0)), dtype=loss.dtype)
+    loss *= mask
+
+    return tf.reduce_sum(loss) / tf.reduce_sum(mask)
 
 def create_padding_mask(seq):
     seq = tf.cast(tf.math.equal(seq, 0), tf.float32)
