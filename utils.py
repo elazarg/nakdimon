@@ -4,6 +4,8 @@ import sys
 import contextlib
 import os
 
+import numpy as np
+
 
 def iterate_files(base_paths: List[str]) -> List[str]:
     for name in base_paths:
@@ -42,3 +44,24 @@ def smart_open(filename: str, mode: str = 'r', encoding: str = 'utf-8', *args, *
                 fh.close()
             except AttributeError:
                 pass
+
+
+def pad_sequences(sequences, maxlen, dtype, value) -> np.ndarray:
+    # based on keras' pad_sequences()
+    num_samples = len(sequences)
+
+    # take the sample shape from the first non empty sequence
+    # checking for consistency in the main loop below.
+    sample_shape = tuple()
+    for s in sequences:
+        if len(s) > 0:
+            sample_shape = np.asarray(s).shape[1:]
+            break
+
+    x = np.full((num_samples, maxlen) + sample_shape, value, dtype=dtype)
+    for idx, s in enumerate(sequences):
+        if not len(s):
+            continue  # empty list/array was found
+        trunc = s[:maxlen]
+        x[idx, :len(trunc)] = np.asarray(trunc, dtype=dtype)
+    return x

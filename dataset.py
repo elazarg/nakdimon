@@ -102,13 +102,11 @@ class Data:
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
         assert heb_items
-        from tensorflow.keras import preprocessing
         self = Data()
         text, normalized, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
 
         def pad(ords, dtype='int32', value=0):
-            return preprocessing.sequence.pad_sequences(ords, maxlen=maxlen,
-                        dtype=dtype, padding='post', truncating='post', value=value)
+            return utils.pad_sequences(ords, maxlen=maxlen, dtype=dtype, value=value)
 
         self.normalized = pad(letters_table.to_ids(normalized))
         self.dagesh = pad(dagesh_table.to_ids(dagesh))
