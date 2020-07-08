@@ -142,6 +142,10 @@ def read_corpus(base_paths, maxlen):
 
 def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
     corpus = read_corpus(base_paths, maxlen)
+    if validation_rate == 0:
+        train = Data.concatenate(corpus)
+        train.shuffle()
+        return train, None
     np.random.shuffle(corpus)
     # result = Data.concatenate(corpus)
     # validation = result.split_validation(validation_rate)
