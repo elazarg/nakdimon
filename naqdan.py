@@ -29,4 +29,4 @@ def diacritize_file(input_filename='-', output_filename='-'):
 
 
 if __name__ == '__main__':
-    diacritize_file('sample.txt')
+    diacritize_file('test/hillel.txt')
