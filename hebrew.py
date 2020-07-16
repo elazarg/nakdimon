@@ -28,6 +28,7 @@ SPECIAL_TOKENS = ['H', 'O', '5']
 
 ENDINGS_TO_REGULAR = dict(zip('ךםןףץ', 'כמנפצ'))
 
+
 def normalize(c):
     if c in VALID_LETTERS: return c
     if c in ENDINGS_TO_REGULAR: return ENDINGS_TO_REGULAR(c)
@@ -228,9 +229,7 @@ def collect_tokens(paths: Iterable[str]):
     return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)))
 
 
-if __name__ == '__main__':
-    tokens = collect_tokens(['texts/pre_modern/'])
-    tokens.sort()
+def stuff():
     stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
     word_dict = collect_wordmap(stripped_tokens)
     # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
@@ -247,3 +246,8 @@ if __name__ == '__main__':
     # for k, v in word_dict.items():
     #     if "וו" in k:
     #         print(v)
+
+
+if __name__ == '__main__':
+    tokens = collect_tokens(['hebrew_diacritized_private/rabanit'])
+    print(len(tokens))

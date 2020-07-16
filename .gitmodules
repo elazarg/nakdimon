@@ -1,0 +1,6 @@
+[submodule "hebrew_diacritized_private"]
+	path = hebrew_diacritized_private
+	url = git@github.com:elazarg/hebrew_diacritized_private.git
+[submodule "hebrew_diacritized"]
+	path = hebrew_diacritized
+	url = git@github.com:elazarg/hebrew_diacritized.git

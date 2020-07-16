@@ -167,7 +167,7 @@ def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tup
 
 
 if __name__ == '__main__':
-    data = Data.concatenate(read_corpus(['texts/modern/wiki/1.txt'], maxlen=64))
+    data = Data.concatenate(read_corpus(['hebrew_diacritized/modern/wiki/1.txt'], maxlen=64))
     data.print_stats()
     print(np.concatenate([data.normalized[:1], data.sin[:1]]))
     res = merge(data.normalized[:1], data.dagesh[:1], data.sin[:1], data.niqqud[:1])
