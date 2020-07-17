@@ -4,20 +4,22 @@ from typing import NamedTuple, Iterator, Iterable, List, Tuple
 import utils
 from functools import lru_cache
 
+# "rafe" denotes a letter that would have been valid to add a diacritic of some category to
+# but instead it is decided not to. This helps the metrics be less biased
+RAFE = '\u05BF'
+
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
-BEGED_KEFET = ['ב', 'ג', 'ד', 'כ', 'פ', 'ת']
-
-NIQQUD = [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']
+NIQQUD = [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']  #  [RAFE] +
 
 HOLAM = '\u05b9'
 
 SHIN_YEMANIT = '\u05c1'
 SHIN_SMALIT = '\u05c2'
-NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]
+NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]  #  [RAFE] +
 
 DAGESH_LETTER = '\u05bc'
-DAGESH = [DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same
+DAGESH = [DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same  #  [RAFE] +
 
 ANY_NIQQUD = NIQQUD + NIQQUD_SIN + DAGESH
 
@@ -96,7 +98,54 @@ def is_niqqud(letter: str) -> bool:
     return letter in list(NIQQUD)
 
 
+def can_dagesh(letter):
+    return letter in ('בגדהוזטיכלמנספצקשת' + 'ךף')
+
+
+def can_sin(letter):
+    return letter == 'ש'
+
+
+def can_niqqud(letter):
+    return letter in ('אבגדהוזחטיכלמנסעפצקרשת' + 'ךן')
+
+
 def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
+    n = len(text)
+    text += '  '
+    i = 0
+    while i < n:
+        letter = text[i]
+
+        dagesh = RAFE if can_dagesh(letter) else ''
+        sin = RAFE if can_sin(letter) else ''
+        niqqud = RAFE if can_niqqud(letter) else ''
+
+        normalized = normalize(letter)
+        i += 1
+        if is_hebrew_letter(normalized):
+            if text[i] == DAGESH_LETTER:
+                assert dagesh == RAFE, (text[i-5:i+5])
+                dagesh = text[i]
+                i += 1
+            if text[i] in NIQQUD_SIN:
+                assert sin == RAFE, (text[i-5:i+5])
+                sin = text[i]
+                i += 1
+            if text[i] in NIQQUD:
+                assert niqqud == RAFE, (text[i-5:i+5])
+                niqqud = text[i]
+                i += 1
+            if letter == 'ו' and dagesh == DAGESH_LETTER and not niqqud:
+                dagesh = RAFE
+                niqqud = DAGESH_LETTER  # shuruk is dagesh
+            if dagesh == RAFE: dagesh = ''
+            if sin == RAFE: sin = ''
+            if niqqud == RAFE: niqqud = ''
+        yield HebrewItem(letter, normalized, dagesh, sin, niqqud)
+
+
+def fix_text(text: str) -> Iterator[HebrewItem]:
     n = len(text)
     text += '  '
     i = 0
@@ -186,7 +235,7 @@ class Token:
         return ''.join(str(c.letter) for c in self.items)
 
     def is_undotted(self):
-        return len(self.items) > 1 and all(c.niqqud == '' for c in self.items)
+        return len(self.items) > 1 and all(c.niqqud in [RAFE, ''] for c in self.items)
 
     def is_definite(self):
         return len(self.items) > 2 and self.items[0].niqqud == 'הַ'[-1] and self.items[0].letter in 'כבלה'
@@ -209,7 +258,11 @@ def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem])
 def iterate_file(path):
     with open(path, encoding='utf-8') as f:
         text = ' '.join(f.read().split())
-        yield from iterate_dotted_text(text)
+        try:
+            yield from iterate_dotted_text(text)
+        except AssertionError as ex:
+            print(path)
+            raise
 
 
 def tokenize(iterator: Iterator[HebrewItem]) -> List[Token]:
@@ -229,7 +282,7 @@ def collect_tokens(paths: Iterable[str]):
     return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)))
 
 
-def stuff():
+def stuff(tokens):
     stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
     word_dict = collect_wordmap(stripped_tokens)
     # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
@@ -249,5 +302,6 @@ def stuff():
 
 
 if __name__ == '__main__':
-    tokens = collect_tokens(['hebrew_diacritized_private/rabanit'])
+    tokens = collect_tokens(['hebrew_diacritized_private/'])
+    stuff(tokens)
     print(len(tokens))
