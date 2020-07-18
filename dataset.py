@@ -8,12 +8,11 @@ import utils
 
 
 class CharacterTable:
-    PAD_TOKEN = ''
-    HIDDEN_TOKEN = ''
+    MASK_TOKEN = ''
 
     def __init__(self, chars):
         # make sure to be consistent with JS
-        self.chars = [CharacterTable.PAD_TOKEN, CharacterTable.HIDDEN_TOKEN] + chars
+        self.chars = [CharacterTable.MASK_TOKEN] + chars
         self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
@@ -47,22 +46,20 @@ def from_categorical(t):
     return np.argmax(t, axis=-1)
 
 
-def merge(texts, ts, ds, ss, ns):
-    normalizeds = [[letters_table.indices_char[x] for x in line] for line in ts]
-    dageshs = [[dagesh_table.indices_char[x] for x in xs] for xs in ds]
-    sins = [[sin_table.indices_char[x] for x in xs] for xs in ss]
-    niqquds = [[niqqud_table.indices_char[x] for x in xs] for xs in ns]
-    assert len(normalizeds) == len(niqquds)
+def merge(texts, tnss, nss, dss, sss):
     res = []
-    for i in range(len(texts)):
+    for ts, tns, ns, ds, ss in zip(texts, tnss, nss, dss, sss):
         sentence = []
-        for t, c, d, s, n in zip(texts[i], normalizeds[i], dageshs[i], sins[i], niqquds[i]):
-            if c == letters_table.PAD_TOKEN:
+        for t, tn, n, d, s in zip(ts, tns, ns, ds, ss):
+            if tn == 0:
                 break
             sentence.append(t)
-            sentence.append(d)
-            sentence.append(s)
-            sentence.append(n)
+            if hebrew.can_dagesh(t):
+                sentence.append(dagesh_table.indices_char[d].replace(hebrew.RAFE, ''))
+            if hebrew.can_sin(t):
+                sentence.append(sin_table.indices_char[s])
+            if hebrew.can_niqqud(t):
+                sentence.append(niqqud_table.indices_char[n].replace(hebrew.RAFE, ''))
         res.append(''.join(sentence))
     return res
 
@@ -128,47 +125,41 @@ class Data:
         print(self.shapes())
 
 
-def load_file(path: str, maxlen: int) -> Data:
-    with open(path, encoding='utf-8') as f:
-        text = ' '.join(f.read().split())
-    res = Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
-    # res.add_kind(path)
-    return res
-
-
 def read_corpus(base_paths, maxlen):
-    return [load_file(path, maxlen) for path in utils.iterate_files(base_paths)]
+    return [Data.from_text(hebrew.iterate_file(path), maxlen)
+            for path in utils.iterate_files(base_paths)]
 
 
-def load_data(base_paths: List[str], validation_rate: float, maxlen: int) -> Tuple[Data, Data]:
+def load_data(base_paths: List[str], validation_rate: float, maxlen: int, shuffle=True) -> Tuple[Data, Data]:
     corpus = read_corpus(base_paths, maxlen)
-    if validation_rate == 0:
-        train = Data.concatenate(corpus)
-        train.shuffle()
-        return train, None
-    np.random.shuffle(corpus)
-    # result = Data.concatenate(corpus)
-    # validation = result.split_validation(validation_rate)
 
-    size = sum(len(x) for x in corpus)
-    validation_size = size * validation_rate
-    validation = []
-    total_size = 0
-    while total_size < validation_size:
-        if abs(total_size - validation_size) < abs(total_size + len(corpus[-1]) - validation_size):
-            break
-        c = corpus.pop()
-        total_size += len(c)
-        validation.append(c)
+    validation_data = None
+    if validation_rate > 0:
+        np.random.shuffle(corpus)
+        # result = Data.concatenate(corpus)
+        # validation = result.split_validation(validation_rate)
+
+        size = sum(len(x) for x in corpus)
+        validation_size = size * validation_rate
+        validation = []
+        total_size = 0
+        while total_size < validation_size:
+            if abs(total_size - validation_size) < abs(total_size + len(corpus[-1]) - validation_size):
+                break
+            c = corpus.pop()
+            total_size += len(c)
+            validation.append(c)
+        validation_data = Data.concatenate(validation)
 
     train = Data.concatenate(corpus)
-    train.shuffle()
-    return train, Data.concatenate(validation)
+    if shuffle:
+        train.shuffle()
+    return train, validation_data
 
 
 if __name__ == '__main__':
     data = Data.concatenate(read_corpus(['hebrew_diacritized/modern/wiki/1.txt'], maxlen=64))
     data.print_stats()
     print(np.concatenate([data.normalized[:1], data.sin[:1]]))
-    res = merge(data.normalized[:1], data.dagesh[:1], data.sin[:1], data.niqqud[:1])
+    res = merge(data.text[:1], data.normalized[:1], data.niqqud[:1], data.dagesh[:1], data.sin[:1])
     print(res)

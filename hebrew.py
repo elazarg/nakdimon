@@ -10,16 +10,16 @@ RAFE = '\u05BF'
 
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
-NIQQUD = [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']  #  [RAFE] +
+NIQQUD = [RAFE] + [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']
 
 HOLAM = '\u05b9'
 
 SHIN_YEMANIT = '\u05c1'
 SHIN_SMALIT = '\u05c2'
-NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]  #  [RAFE] +
+NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]
 
 DAGESH_LETTER = '\u05bc'
-DAGESH = [DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same  #  [RAFE] +
+DAGESH = [RAFE, DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same
 
 ANY_NIQQUD = NIQQUD + NIQQUD_SIN + DAGESH
 
@@ -94,10 +94,6 @@ def is_hebrew_letter(letter: str) -> bool:
     return '\u05d0' <= letter <= '\u05ea'
 
 
-def is_niqqud(letter: str) -> bool:
-    return letter in list(NIQQUD)
-
-
 def can_dagesh(letter):
     return letter in ('בגדהוזטיכלמנספצקשת' + 'ךף')
 
@@ -118,9 +114,8 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         letter = text[i]
 
         dagesh = RAFE if can_dagesh(letter) else ''
-        sin = RAFE if can_sin(letter) else ''
+        sin = SHIN_YEMANIT if can_sin(letter) else ''
         niqqud = RAFE if can_niqqud(letter) else ''
-
         normalized = normalize(letter)
         i += 1
         if is_hebrew_letter(normalized):
@@ -129,7 +124,7 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                 dagesh = text[i]
                 i += 1
             if text[i] in NIQQUD_SIN:
-                assert sin == RAFE, (text[i-5:i+5])
+                assert sin == SHIN_YEMANIT, (text[i-5:i+5])
                 sin = text[i]
                 i += 1
             if text[i] in NIQQUD:
@@ -139,51 +134,20 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
             if letter == 'ו' and dagesh == DAGESH_LETTER and not niqqud:
                 dagesh = RAFE
                 niqqud = DAGESH_LETTER  # shuruk is dagesh
-            if dagesh == RAFE: dagesh = ''
-            if sin == RAFE: sin = ''
-            if niqqud == RAFE: niqqud = ''
+
+            assert text[i] not in ANY_NIQQUD, f'{i}, {text[i-15:i]} {ord(text[i])} {text[i+1:i+15]}'
+
         yield HebrewItem(letter, normalized, dagesh, sin, niqqud)
 
 
-def fix_text(text: str) -> Iterator[HebrewItem]:
-    n = len(text)
-    text += '  '
-    i = 0
-    while i < n:
-        dagesh = ''
-        niqqud = ''
-        sin = ''
-        letter = text[i]
-        normalized = normalize(letter)
-        i += 1
-        if is_hebrew_letter(normalized):
-            maybe_dagesh = False
-            while i < n and text[i] in ANY_NIQQUD:
-                if text[i] == DAGESH_LETTER:
-                    if normalized == 'ו':
-                        maybe_dagesh = True
-                    else:
-                        dagesh = text[i]
-                elif text[i] in NIQQUD_SIN:
-                    sin = text[i]
-                elif text[i] == HOLAM and niqqud:
-                    # fix HOLAM where there should be a SIN
-                    sin = SHIN_SMALIT
-                else:
-                    if niqqud == HOLAM:
-                        # fix HOLAM where there should be a SIN
-                        sin = SHIN_SMALIT
-                    niqqud = text[i]
-                i += 1
-            if maybe_dagesh:
-                if niqqud:
-                    dagesh = DAGESH_LETTER
-                else:
-                    niqqud = DAGESH_LETTER
-            if normalized == 'ש' and not sin and niqqud == HOLAM and i < n and not is_hebrew_letter(text[i]):
-                niqqud = ''
-                sin = SHIN_SMALIT
-        yield HebrewItem(letter, normalized, dagesh, sin, niqqud)
+def iterate_file(path):
+    with open(path, encoding='utf-8') as f:
+        text = ' '.join(f.read().split())
+        try:
+            yield from iterate_dotted_text(text)
+        except AssertionError as ex:
+            ex.args += (path,)
+            raise
 
 
 def split_by_length(characters: Iterable[HebrewItem], maxlen: int):
@@ -253,16 +217,6 @@ def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem])
         yield c
     if current:
         tokens_list.append(Token(current).strip_nonhebrew())
-
-
-def iterate_file(path):
-    with open(path, encoding='utf-8') as f:
-        text = ' '.join(f.read().split())
-        try:
-            yield from iterate_dotted_text(text)
-        except AssertionError as ex:
-            print(path)
-            raise
 
 
 def tokenize(iterator: Iterator[HebrewItem]) -> List[Token]:
