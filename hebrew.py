@@ -16,12 +16,12 @@ HOLAM = '\u05b9'
 
 SHIN_YEMANIT = '\u05c1'
 SHIN_SMALIT = '\u05c2'
-NIQQUD_SIN = [SHIN_YEMANIT, SHIN_SMALIT]
+NIQQUD_SIN = [RAFE, SHIN_YEMANIT, SHIN_SMALIT]  # RAFE is for acronyms
 
 DAGESH_LETTER = '\u05bc'
 DAGESH = [RAFE, DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the same
 
-ANY_NIQQUD = NIQQUD + NIQQUD_SIN + DAGESH
+ANY_NIQQUD = [RAFE] + NIQQUD[1:] + NIQQUD_SIN[1:] + DAGESH[1:]
 
 VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
                  'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
@@ -114,28 +114,29 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         letter = text[i]
 
         dagesh = RAFE if can_dagesh(letter) else ''
-        sin = SHIN_YEMANIT if can_sin(letter) else ''
+        sin = RAFE if can_sin(letter) else ''
         niqqud = RAFE if can_niqqud(letter) else ''
         normalized = normalize(letter)
         i += 1
+
+        # assert letter not in ANY_NIQQUD, f'{i}, {text[i - 15:i + 15]}'
+
         if is_hebrew_letter(normalized):
             if text[i] == DAGESH_LETTER:
-                assert dagesh == RAFE, (text[i-5:i+5])
+                # assert dagesh == RAFE, (text[i-5:i+5])
                 dagesh = text[i]
                 i += 1
             if text[i] in NIQQUD_SIN:
-                assert sin == SHIN_YEMANIT, (text[i-5:i+5])
+                # assert sin == RAFE, (text[i-5:i+5])
                 sin = text[i]
                 i += 1
             if text[i] in NIQQUD:
-                assert niqqud == RAFE, (text[i-5:i+5])
+                # assert niqqud == RAFE, (text[i-5:i+5])
                 niqqud = text[i]
                 i += 1
             if letter == 'ו' and dagesh == DAGESH_LETTER and not niqqud:
                 dagesh = RAFE
                 niqqud = DAGESH_LETTER  # shuruk is dagesh
-
-            assert text[i] not in ANY_NIQQUD, f'{i}, {text[i-15:i]} {ord(text[i])} {text[i+1:i+15]}'
 
         yield HebrewItem(letter, normalized, dagesh, sin, niqqud)
 
@@ -161,7 +162,8 @@ def split_by_length(characters: Iterable[HebrewItem], maxlen: int):
         if len(out) == maxlen - 1:
             yield out[:space+1]
             out = out[space+1:]
-    yield out
+    if out:
+        yield out
 
 
 class Token:

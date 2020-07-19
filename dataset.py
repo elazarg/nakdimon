@@ -57,7 +57,7 @@ def merge(texts, tnss, nss, dss, sss):
             if hebrew.can_dagesh(t):
                 sentence.append(dagesh_table.indices_char[d].replace(hebrew.RAFE, ''))
             if hebrew.can_sin(t):
-                sentence.append(sin_table.indices_char[s])
+                sentence.append(sin_table.indices_char[s].replace(hebrew.RAFE, ''))
             if hebrew.can_niqqud(t):
                 sentence.append(niqqud_table.indices_char[n].replace(hebrew.RAFE, ''))
         res.append(''.join(sentence))
