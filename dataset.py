@@ -125,13 +125,12 @@ class Data:
         print(self.shapes())
 
 
-def read_corpus(base_paths, maxlen):
-    return [Data.from_text(hebrew.iterate_file(path), maxlen)
-            for path in utils.iterate_files(base_paths)]
+def read_corpora(base_paths):
+    return [list(hebrew.iterate_file(path)) for path in utils.iterate_files(base_paths)]
 
 
-def load_data(base_paths: List[str], validation_rate: float, maxlen: int, shuffle=True) -> Tuple[Data, Data]:
-    corpus = read_corpus(base_paths, maxlen)
+def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True) -> Tuple[Data, Data]:
+    corpus = [Data.from_text(x, maxlen) for x in corpora]
 
     validation_data = None
     if validation_rate > 0:
@@ -158,7 +157,7 @@ def load_data(base_paths: List[str], validation_rate: float, maxlen: int, shuffl
 
 
 if __name__ == '__main__':
-    data = Data.concatenate(read_corpus(['hebrew_diacritized/modern/wiki/1.txt'], maxlen=64))
+    data = Data.concatenate([Data.from_text(x, maxlen=64) for x in read_corpora(['hebrew_diacritized/modern/wiki/1.txt'])])
     data.print_stats()
     print(np.concatenate([data.normalized[:1], data.sin[:1]]))
     res = merge(data.text[:1], data.normalized[:1], data.niqqud[:1], data.dagesh[:1], data.sin[:1])
