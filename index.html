@@ -14,7 +14,7 @@
         <div id="separator">
             <button id="perform_dot" disabled>טוען</button>
         </div>
-        <textarea id="dotted_text" readonly></textarea>
+        <p id="dotted_text" readonly></p>
     </div>
   </div>
 </body>
@@ -22,7 +22,9 @@
 <script src="https://nanobar.jacoborus.codes/js/nanobar.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> 
+
 <script src="dotter.js"></script>
+<script src="editor.js"></script>
 <script>
   tf.setBackend('webgl');
   load_model();

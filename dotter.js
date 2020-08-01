@@ -62,15 +62,17 @@ function prediction_to_text(input, model_output, undotted_text) {
     const dagesh_result = from_categorical(dagesh, len);
     const sin_result = from_categorical(sin, len);
 
-    let output = '';
+    let output = [];
     for (let i = 0; i < len; i++) {
         const c = undotted_text[i];
-        output += c;
+        const fresh = {char: c, niqqud: '', dagesh: '', sin: ''};
+
         if (HEBREW_LETTERS.includes(c)) {
-            output += niqqud_array[niqqud_result[i]] || '';
-            output += dagesh_array[dagesh_result[i]] || '';
-            output += sin_array[sin_result[i]] || '';
+            fresh.niqqud = niqqud_array[niqqud_result[i]];
+            fresh.dagesh = dagesh_array[dagesh_result[i]];
+            fresh.sin = sin_array[sin_result[i]];
         }
+        output.push(fresh);
     }
     return output;
 }
@@ -95,10 +97,9 @@ async function load_model() {
 
     const dotButton = document.getElementById("perform_dot");
     const undotted_text = document.getElementById("undotted_text");
-    const dotted_text = document.getElementById("dotted_text");
     dotButton.disabled = false;
     dotButton.textContent = "נקד";
     dotButton.addEventListener("click", function (ev) {
-        dotted_text.value = perform_dot(undotted_text.value);
+        update_dotted(perform_dot(undotted_text.value));
     });
 }
