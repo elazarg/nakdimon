@@ -32,7 +32,12 @@ p {
     font-size: 30px;
 }
 
+span:hover {
+    font-size: 130%;
+}
+
 textarea, p {
+    cursor: default;
     margin-left: auto;
     margin-right: auto;
     text-align: right;
