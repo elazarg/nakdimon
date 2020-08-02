@@ -1,50 +1,95 @@
 const DAGESH = 'ּ';
+const SIN = 'ׁ';
+const SHIN = 'ׂ';
+const SHURUK = 'ּ';
+const PLAIN_NIQQUD = ['ְ',   'ֳ', 'ֲ', 'ֱ', null, '', 'ָ', 'ַ', 'ֶ', 'ֵ', 'ֹ', 'ֻ', 'ִ', null];
+const GARON_NIQQUD = [null, 'ֳ', 'ֲ', 'ֱ', null, '', 'ָ', 'ַ', 'ֶ', 'ֵ', 'ֹ', 'ֻ', 'ִ', null];
+const VAV_NIQQUD   = ['ְ',   'ֳ', 'ֲ', 'ֱ', null, '', 'ָ', 'ַ', 'ֶ', 'ֵ', 'ֹ', 'ֻ', 'ִ', 'ּ'];
+const KHAF_SOFIT_NIQQUD = ['', 'ְ', 'ָ'];
+const TAF_SOFIT_NIQQUD = ['', 'ְ'];
+const GARON_SOFIT_NIQQUD = ['', 'ַ'];
 
 function to_text(item) {
     return item.char + (item.dagesh || '') + (item.sin || '') + (item.niqqud || '');
 }
 
 const itemProto = document.getElementById("itemProto").cloneNode(true);
-
+itemProto.removeAttribute("id");
 
 
 function update_dotted(items) {
     const dotted_text = document.getElementById("dotted_text");
     dotted_text.innerHTML = '';
     console.log(items);
-    for (const item of items) {
+    for (const [i, item] of items.entries()) {
         const node = itemProto.cloneNode(true);
         node.textContent = to_text(item);
-        function tipcontent(item) {
+        function tipcontent(t, item) {
+            let whitespace_seen = false;
+            let future_hebrew = false;
+            for (let j=i+1; j < items.length; j++) {
+                const q = items[j].char;
+                if (q === " ")
+                    whitespace_seen = true;
+                if (HEBREW_LETTERS.includes(q)) {
+                    future_hebrew = true
+                    break;
+                }
+            }
+            const sofit = whitespace_seen || !future_hebrew;
+
             const res = document.createElement('div');
-            for (const n of niqqud_array) {
+            const iterable = sofit && 'אהחע'.includes(item.char) ? GARON_SOFIT_NIQQUD
+                           : sofit && 'ת' === item.char ? TAF_SOFIT_NIQQUD
+                           : item.char === 'ך' ? KHAF_SOFIT_NIQQUD
+                           : item.char === 'ו' ? VAV_NIQQUD
+                           : 'אהחע'.includes(item.char) ? GARON_NIQQUD
+                           : PLAIN_NIQQUD;
+            for (const n of iterable) {
                 const button = document.createElement('input');
-                button.setAttribute('class', "niqqud-button");
                 button.setAttribute('type', "button");
-                button.setAttribute('value', item.char + item.dagesh + item.sin + n);
-                button.addEventListener('onClick', function update_niqqud() {
-                    item.niqqud = n;
-                    node.textContent = to_text(item);
-                });
+                if (n !== null) {
+                    button.setAttribute('class', "niqqud-button");
+                    button.setAttribute('value', item.char + item.dagesh + item.sin + n);
+                    button.addEventListener('click', function () {
+                        item.niqqud = n;
+                        node.textContent = to_text(item);
+                        t.hide();
+                    });
+                } else {
+                    button.setAttribute('class', "niqqud-button empty");
+                    button.setAttribute('value', " ");
+                }
 
                 res.appendChild(button);
             }
-            console.log(res);
             return res;
         }
         if (HEBREW_LETTERS.includes(item.char)) {
-            let t = tippy(node, {
-                content: tipcontent(item),
-                interactive: true,
-                trigger: 'click'
-            });
-            if (!'אחעםןףץ'.includes(item.char)) {
-                function listener(e) {
-                    item.dagesh = item.dagesh ? '' : DAGESH;
-                    node.textContent = to_text(item);
-                    t.setProps({'content': tipcontent(item)});
+            if (!'םןףץ'.includes(item.char)) {
+                let t = tippy(node, {
+                    interactive: true,
+                    // interactiveBorder: 30,
+                    maxWidth: 210,
+                    trigger: 'click'
+                });
+                t.setContent(tipcontent(t, item));
+                if (!'אחע'.includes(item.char)) {
+                    function toggle_dagesh(e) {
+                        item.dagesh = item.dagesh ? '' : DAGESH;
+                        node.textContent = to_text(item);
+                        t.setContent(tipcontent(t, item));
+                    }
+                    node.addEventListener('contextmenu', toggle_dagesh);
                 }
-                node.addEventListener('dblclick', listener);
+                if (item.char === 'ש') {
+                    function toggle_sin(e) {
+                        item.sin = item.sin === SIN ? SHIN : SIN;
+                        node.textContent = to_text(item);
+                        t.setContent(tipcontent(t, item));
+                    }
+                    node.addEventListener('dblclick', toggle_sin);
+                }
             }
         }
         dotted_text.appendChild(node);

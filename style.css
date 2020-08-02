@@ -1,10 +1,10 @@
 @import url(https://fonts.googleapis.com/earlyaccess/alefhebrew.css);
 
 html, body {
+    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     margin: 0;
     height: 100%;
     width: 100%;
-    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -22,13 +22,15 @@ h1 {
 }
 
 #perform_dot {
-    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 30px;
 }
 
 .charItem:hover {
-    font-size: 130%;
+    font-size: 120%;
     cursor: none;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 1;
 }
 
 p {
@@ -37,33 +39,32 @@ p {
 }
 
 textarea, p {
+    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     margin-left: auto;
     margin-right: auto;
-    text-align: right;
+    text-align: justify;
     line-height: 1.4;
-    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 30px;
     height: 30vh;
     width: 90%;
     border: 3px solid #cccccc;
     background-color: #e6e6e6;
-    padding: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
     background-position: bottom right;
     background-repeat: no-repeat;
     margin-top: 0.5rem;
 }
 
+.tippy-box {
+    background-color: unset;
+}
+
 .niqqud-button {
-    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 30px;
+    min-width: 35px;
 }
 
-.dropdown {
-    float: right;
-    display: none;
-    position: absolute;
-}
-
-.charItem:hover .dropdown {
-    display: inline;
+.empty {
+    opacity: 0;
 }

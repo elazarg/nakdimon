@@ -10,11 +10,11 @@
     <h1>נקדן</h1>
     <label for="text"></label>
     <div id="textboxes">
-        <textarea id="undotted_text" required placeholder="הכנס טקסט לניקוד"></textarea>
+        <textarea id="undotted_text" required placeholder="הכנס טקסט לניקוד" autofocus></textarea>
         <div id="separator">
             <button id="perform_dot" disabled>טוען</button>
         </div>
-        <p id="dotted_text">
+        <p id="dotted_text" oncontextmenu="return false">
             <span id="itemProto" class="charItem"></span>
         </p>
     </div>

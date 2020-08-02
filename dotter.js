@@ -87,19 +87,28 @@ async function load_model() {
     model.summary();
     MAXLEN = model.input.shape[1];
 
+    const input_text = document.getElementById("undotted_text");
+    const dotButton = document.getElementById("perform_dot");
 
-    function perform_dot(undotted_text) {
-        undotted_text = remove_niqqud(undotted_text);
-        const input = split_to_rows(undotted_text);
-        const prediction = model.predict(tf.tensor2d(input), {batchSize: 32});
-        return prediction_to_text([].concat(... input), prediction, undotted_text);
+    function click() {
+        // toggle state-machine
+        if (dotButton.textContent !== "נקד") {
+            input_text.removeAttribute("hidden");
+            dotButton.textContent = "נקד";
+        } else {
+            const undotted_text = remove_niqqud(input_text.value);
+            const input = split_to_rows(undotted_text);
+            const prediction = model.predict(tf.tensor2d(input), {batchSize: 32});
+            const res = prediction_to_text([].concat(...input), prediction, undotted_text);
+            update_dotted(res);
+
+            input_text.setAttribute("hidden", "true");
+            dotButton.textContent = "עוד";
+        }
     }
 
-    const dotButton = document.getElementById("perform_dot");
-    const undotted_text = document.getElementById("undotted_text");
     dotButton.disabled = false;
-    dotButton.textContent = "נקד";
-    dotButton.addEventListener("click", function (ev) {
-        update_dotted(perform_dot(undotted_text.value));
-    });
+
+    dotButton.addEventListener("click", () => click());
+    click();
 }
