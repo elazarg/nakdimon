@@ -15,12 +15,6 @@ h1 {
     margin-bottom: 0;
 }
 
-p {
-    line-height: 1.5rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0;
-}
-
 #textboxes {
     text-align: center;
     width: 100%;
@@ -32,19 +26,23 @@ p {
     font-size: 30px;
 }
 
-span:hover {
+.charItem:hover {
     font-size: 130%;
+    cursor: none;
+}
+
+p {
+    user-select: none;
+    cursor: default;
 }
 
 textarea, p {
-    cursor: default;
     margin-left: auto;
     margin-right: auto;
     text-align: right;
     line-height: 1.4;
     font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 30px;
-    width: inherit;
     height: 30vh;
     width: 90%;
     border: 3px solid #cccccc;
@@ -53,4 +51,19 @@ textarea, p {
     background-position: bottom right;
     background-repeat: no-repeat;
     margin-top: 0.5rem;
+}
+
+.niqqud-button {
+    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 30px;
+}
+
+.dropdown {
+    float: right;
+    display: none;
+    position: absolute;
+}
+
+.charItem:hover .dropdown {
+    display: inline;
 }
