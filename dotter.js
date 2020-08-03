@@ -1,3 +1,4 @@
+RAFE = '\u05BF';
 const niqqud_array = ['', '', 'ְ', 'ֱ', 'ֲ', 'ֳ', 'ִ', 'ֵ', 'ֶ', 'ַ', 'ָ', 'ֹ', 'ֺ', 'ֻ', 'ּ', 'ַ'];
 const dagesh_array = ['', '', 'ּ'];
 const sin_array = ['', '', 'ׁ', 'ׂ'];
@@ -6,9 +7,9 @@ const HEBREW_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', '�
 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת'];
 const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?'].concat(HEBREW_LETTERS);
 const SPECIAL_TOKENS = ['H', 'O', '5'];
-const ALL_TOKENS =['', ''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
-const BATCH_SIZE = 32;
-let MAXLEN = null;
+const ALL_TOKENS =[''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
+const BATCH_SIZE = 64;
+let MAXLEN = 90;
 
 function normalize(c) {
     if (VALID_LETTERS.includes(c)) return c;
@@ -41,13 +42,24 @@ function split_to_rows(text) {
     }
     while (line.length < MAXLEN)
         line.push(0);
-    console.log(rows);
     return rows;
 }
 
 function text_to_input(text) {
     const ords = Array.from(text).map(c => ALL_TOKENS.indexOf(normalize(c)));
     return  tf.tensor1d(ords).pad([[0, BATCH_SIZE*MAXLEN - text.length]]).reshape([BATCH_SIZE, MAXLEN]);
+}
+
+function can_dagesh(letter) {
+    return ('בגדהוזטיכלמנספצקשת' + 'ךף').includes(letter);
+}
+
+function can_sin(letter) {
+    return letter === 'ש';
+}
+
+function can_niqqud(letter) {
+    return ('אבגדהוזחטיכלמנסעפצקרשת' + 'ךן').includes(letter);
 }
 
 function prediction_to_text(input, model_output, undotted_text) {
@@ -68,9 +80,12 @@ function prediction_to_text(input, model_output, undotted_text) {
         const fresh = {char: c, niqqud: '', dagesh: '', sin: ''};
 
         if (HEBREW_LETTERS.includes(c)) {
-            fresh.niqqud = niqqud_array[niqqud_result[i]];
-            fresh.dagesh = dagesh_array[dagesh_result[i]];
-            fresh.sin = sin_array[sin_result[i]];
+            if (can_niqqud(c))
+                fresh.niqqud = niqqud_array[niqqud_result[i]];
+            if (can_dagesh(c))
+                fresh.dagesh = dagesh_array[dagesh_result[i]];
+            if (can_sin(c))
+                fresh.sin = sin_array[sin_result[i]];
         }
         output.push(fresh);
     }
@@ -98,7 +113,7 @@ async function load_model() {
         } else {
             const undotted_text = remove_niqqud(input_text.value);
             const input = split_to_rows(undotted_text);
-            const prediction = model.predict(tf.tensor2d(input), {batchSize: 32});
+            const prediction = model.predict(tf.tensor2d(input), {batchSize: 64});
             const res = prediction_to_text([].concat(...input), prediction, undotted_text);
             update_dotted(res);
 

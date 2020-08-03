@@ -36,10 +36,10 @@ KINDS = ('biblical', 'rabanit', 'poetry', 'pre_modern', 'modern', 'garbage')
 
 
 def print_tables():
-    print(letters_table.chars)
-    print(niqqud_table.chars)
-    print(dagesh_table.chars)
-    print(sin_table.chars)
+    print('const ALL_TOKENS =', letters_table.chars, end=';\n')
+    print('const niqqud_array =', niqqud_table.chars, end=';\n')
+    print('const dagesh_array =', dagesh_table.chars, end=';\n')
+    print('const sin_array =', sin_table.chars, end=';\n')
 
     
 def from_categorical(t):
@@ -157,8 +157,10 @@ def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True) -> Tup
 
 
 if __name__ == '__main__':
-    data = Data.concatenate([Data.from_text(x, maxlen=64) for x in read_corpora(['hebrew_diacritized/modern/wiki/1.txt'])])
-    data.print_stats()
-    print(np.concatenate([data.normalized[:1], data.sin[:1]]))
-    res = merge(data.text[:1], data.normalized[:1], data.niqqud[:1], data.dagesh[:1], data.sin[:1])
-    print(res)
+    # data = Data.concatenate([Data.from_text(x, maxlen=64) for x in read_corpora(['hebrew_diacritized/modern/wiki/1.txt'])])
+    # data.print_stats()
+    # print(np.concatenate([data.normalized[:1], data.sin[:1]]))
+    # res = merge(data.text[:1], data.normalized[:1], data.niqqud[:1], data.dagesh[:1], data.sin[:1])
+    # print(res)
+    print_tables()
+    print(letters_table.to_ids(["שלום"]))

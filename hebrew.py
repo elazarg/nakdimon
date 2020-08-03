@@ -23,9 +23,7 @@ DAGESH = [RAFE, DAGESH_LETTER]  # note that DAGESH and SHURUK are one and the sa
 
 ANY_NIQQUD = [RAFE] + NIQQUD[1:] + NIQQUD_SIN[1:] + DAGESH[1:]
 
-VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?',
-                 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'ך', 'כ', 'ל', 'ם', 'מ', 'ן', 'נ', 'ס', 'ע', 'ף',
-                 'פ', 'ץ', 'צ', 'ק', 'ר', 'ש', 'ת']
+VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?'] + HEBREW_LETTERS
 SPECIAL_TOKENS = ['H', 'O', '5']
 
 ENDINGS_TO_REGULAR = dict(zip('ךםןףץ', 'כמנפצ'))
@@ -119,19 +117,19 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         normalized = normalize(letter)
         i += 1
 
-        # assert letter not in ANY_NIQQUD, f'{i}, {text[i - 15:i + 15]}'
+        assert letter not in ANY_NIQQUD, f'{i}, {text[i - 15:i + 15]}'
 
         if is_hebrew_letter(normalized):
             if text[i] == DAGESH_LETTER:
-                # assert dagesh == RAFE, (text[i-5:i+5])
+                assert dagesh == RAFE, (text[i-5:i+5])
                 dagesh = text[i]
                 i += 1
             if text[i] in NIQQUD_SIN:
-                # assert sin == RAFE, (text[i-5:i+5])
+                assert sin == RAFE, (text[i-5:i+5])
                 sin = text[i]
                 i += 1
             if text[i] in NIQQUD:
-                # assert niqqud == RAFE, (text[i-5:i+5])
+                assert niqqud == RAFE, (text[i-5:i+5])
                 niqqud = text[i]
                 i += 1
             if letter == 'ו' and dagesh == DAGESH_LETTER and not niqqud:
@@ -258,6 +256,6 @@ def stuff(tokens):
 
 
 if __name__ == '__main__':
-    tokens = collect_tokens(['hebrew_diacritized_private/'])
+    tokens = collect_tokens(['hebrew_diacritized/'])
     stuff(tokens)
     print(len(tokens))

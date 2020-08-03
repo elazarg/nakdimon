@@ -8,22 +8,32 @@
 <body dir="rtl">
   <div id='content'>
     <h1>נקדן</h1>
-    <label for="text"></label>
     <div id="textboxes">
         <textarea id="undotted_text" required placeholder="הכנס טקסט לניקוד" autofocus></textarea>
         <div id="separator">
             <button id="perform_dot" disabled>טוען</button>
         </div>
+      <div id="dotted_text_container">
         <p id="dotted_text" oncontextmenu="return false">
             <span id="itemProto" class="charItem"></span>
         </p>
+      </div>
+      <button id="download" onclick="download()">הורד</button>
     </div>
   </div>
 </body>
+<!-- <label for="kind">סוג: </label>
+<select name="kind" id="kind">
+  <option value="news">News</option>
+  <option value="wiki">Wiki</option>
+  <option value="blogs">Blogs</option>
+  <option value="forums">Forums</option>
+</select> -->
 
 <script src="https://nanobar.jacoborus.codes/js/nanobar.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
 
 <script src="dotter.js"></script>
 <script src="editor.js"></script>

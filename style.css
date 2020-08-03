@@ -26,26 +26,28 @@ h1 {
 }
 
 .charItem:hover {
-    font-size: 120%;
+    /* font-size: 120%; */
     cursor: none;
-    padding-top: 0;
-    padding-bottom: 0;
-    line-height: 1;
+    color: green;
+    /* padding-top: 0; */
+    /* padding-bottom: 0; */
+    /* line-height: 1; */
 }
 
-p {
-    user-select: none;
+#dotted_text_container {
+    /* user-select: none; */
     cursor: default;
+    overflow-y: scroll;
 }
 
-textarea, p {
+textarea, #dotted_text_container {
     font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     margin-left: auto;
     margin-right: auto;
     text-align: justify;
     line-height: 1.4;
     font-size: 30px;
-    height: 30vh;
+    min-height: 30vh;
     width: 90%;
     border: 3px solid #cccccc;
     background-color: #e6e6e6;
