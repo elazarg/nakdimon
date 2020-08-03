@@ -12,8 +12,8 @@ const BATCH_SIZE = 64;
 let MAXLEN = 90;
 
 function normalize(c) {
-    if (VALID_LETTERS.includes(c)) return c;
     if (c === '\n' || c === '\t') return ' ';
+    if (VALID_LETTERS.includes(c)) return c;
     if (['־', '‒', '–', '—', '―', '−'].includes(c)) return '-';
     if (c === '[') return '(';
     if (c === ']') return ')';
@@ -112,8 +112,8 @@ async function load_model() {
             dotButton.textContent = "נקד";
         } else {
             const undotted_text = remove_niqqud(input_text.value);
-            const input = split_to_rows(undotted_text);
-            const prediction = model.predict(tf.tensor2d(input), {batchSize: 64});
+            const input = split_to_rows(undotted_text.replace(/./gms, normalize));
+            const prediction = model.predict(tf.tensor2d(input), {batchSize: BATCH_SIZE});
             const res = prediction_to_text([].concat(...input), prediction, undotted_text);
             update_dotted(res);
 
