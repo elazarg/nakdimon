@@ -8,8 +8,6 @@ const HEBREW_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', '�
 const VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?'].concat(HEBREW_LETTERS);
 const SPECIAL_TOKENS = ['H', 'O', '5'];
 const ALL_TOKENS =[''].concat(SPECIAL_TOKENS).concat(VALID_LETTERS);
-const BATCH_SIZE = 64;
-let MAXLEN = 90;
 
 function normalize(c) {
     if (c === '\n' || c === '\t') return ' ';
@@ -25,7 +23,7 @@ function normalize(c) {
     return 'O';
 }
 
-function split_to_rows(text) {
+function split_to_rows(text, MAXLEN) {
     const space = ALL_TOKENS.indexOf(" ");
     const arr = text.split(" ").map(s => Array.from(s).map(c => ALL_TOKENS.indexOf(c)));
     let line = [];
@@ -45,11 +43,6 @@ function split_to_rows(text) {
     return rows;
 }
 
-function text_to_input(text) {
-    const ords = Array.from(text).map(c => ALL_TOKENS.indexOf(normalize(c)));
-    return  tf.tensor1d(ords).pad([[0, BATCH_SIZE*MAXLEN - text.length]]).reshape([BATCH_SIZE, MAXLEN]);
-}
-
 function can_dagesh(letter) {
     return ('בגדהוזטיכלמנספצקשת' + 'ךף').includes(letter);
 }
@@ -62,17 +55,17 @@ function can_niqqud(letter) {
     return ('אבגדהוזחטיכלמנסעפצקרשת' + 'ךן').includes(letter);
 }
 
-function prediction_to_text(input, model_output, undotted_text) {
-        
-    function from_categorical(arr, len) {
-        return arr.argMax(-1).reshape([-1]).arraySync().filter((x, i) => input[i]);
+function prediction_to_text(input, prediction, undotted_text) {
+    console.log(prediction[0].arraySync());
+    console.log(prediction[0].argMax(-1).arraySync());
+    function from_categorical(arr) {
+        return arr.argMax(-1).reshape([-1]).arraySync().filter((e, i) => input[i] > 0);
     }
-
-    const [niqqud, dagesh, sin] = model_output;
+    const [niqqud, dagesh, sin] = prediction;
     const len = undotted_text.length;
-    const niqqud_result = from_categorical(niqqud, len);
-    const dagesh_result = from_categorical(dagesh, len);
-    const sin_result = from_categorical(sin, len);
+    const niqqud_result = from_categorical(niqqud);
+    const dagesh_result = from_categorical(dagesh);
+    const sin_result = from_categorical(sin);
 
     let output = [];
     for (let i = 0; i < len; i++) {
@@ -98,9 +91,10 @@ function remove_niqqud(text) {
 
 async function load_model() {
     const bar = new Nanobar();
+    console.time('load model');
     const model = await tf.loadLayersModel('./models/model.json', {onProgress: (fraction) => { bar.go(100 * fraction); } });
+    console.timeEnd('load model');
     model.summary();
-    MAXLEN = model.input.shape[1];
 
     const input_text = document.getElementById("undotted_text");
     const dotButton = document.getElementById("perform_dot");
@@ -111,10 +105,19 @@ async function load_model() {
             input_text.removeAttribute("hidden");
             dotButton.textContent = "נקד";
         } else {
+            console.time('to_input');
             const undotted_text = remove_niqqud(input_text.value);
-            const input = split_to_rows(undotted_text.replace(/./gms, normalize));
-            const prediction = model.predict(tf.tensor2d(input), {batchSize: BATCH_SIZE});
+            const input = split_to_rows(undotted_text.replace(/./gms, normalize), 90);
+            console.log(input);
+            console.timeEnd('to_input');
+
+            console.time('predict');
+            const prediction = model.predict(tf.tensor2d(input), {batchSize: 64});
+            console.timeEnd('predict');
+
+            console.time('to_text');
             const res = prediction_to_text([].concat(...input), prediction, undotted_text);
+            console.timeEnd('to_text');
             update_dotted(res);
 
             input_text.setAttribute("hidden", "true");
