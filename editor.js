@@ -1,12 +1,12 @@
 const DAGESH = 'ּ';
 const SIN = 'ׁ';
 const SHIN = 'ׂ';
-const SHURUK = 'ּ';
+
 const PLAIN_NIQQUD = ['ְ',   'ֳ', 'ֲ', 'ֱ', null, '', 'ָ', 'ַ', 'ֶ', 'ֵ', 'ֹ', 'ֻ', 'ִ', null];
 const VAV_NIQQUD   = ['ְ',   'ֳ', 'ֲ', 'ֱ', null, '', 'ָ', 'ַ', 'ֶ', 'ֵ', 'ֹ', 'ֻ', 'ִ', 'ּ'];
 const KHAF_SOFIT_NIQQUD = ['', 'ְ', 'ָ'];
 const TAF_SOFIT_NIQQUD = ['', 'ְ', 'ָ'];
-const GARON_SOFIT_NIQQUD = ['', 'ַ'];
+const GARON_SOFIT_NIQQUD = ['', 'ַ', 'ָ'];
 
 function to_text(item) {
     const c = item.char === '\n' ? '\r\n' : item.char;

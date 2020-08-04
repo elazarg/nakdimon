@@ -133,7 +133,6 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
                 niqqud = text[i]
                 i += 1
             if letter == 'ו' and dagesh == DAGESH_LETTER and niqqud == RAFE:
-                print(text[i-5:i+5])
                 dagesh = RAFE
                 niqqud = DAGESH_LETTER
 

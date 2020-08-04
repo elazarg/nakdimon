@@ -118,7 +118,10 @@ async function load_model() {
             console.time('to_text');
             const res = prediction_to_text([].concat(...input), prediction, undotted_text);
             console.timeEnd('to_text');
+
+            console.time('editor');
             update_dotted(res);
+            console.timeEnd('editor');
 
             input_text.setAttribute("hidden", "true");
             dotButton.textContent = "עוד";
