@@ -32,7 +32,6 @@ letters_table = CharacterTable(hebrew.SPECIAL_TOKENS + hebrew.VALID_LETTERS)
 dagesh_table = CharacterTable(hebrew.DAGESH)
 sin_table = CharacterTable(hebrew.NIQQUD_SIN)
 niqqud_table = CharacterTable(hebrew.NIQQUD)
-KINDS = ('biblical', 'rabanit', 'poetry', 'pre_modern', 'modern', 'garbage')
 
 
 def print_tables():
@@ -70,7 +69,6 @@ class Data:
     dagesh: np.ndarray = None
     sin: np.ndarray = None
     niqqud: np.ndarray = None
-    kind: np.ndarray = None
 
     @staticmethod
     def concatenate(others):
@@ -80,21 +78,19 @@ class Data:
         self.dagesh = np.concatenate([x.dagesh for x in others])
         self.sin = np.concatenate([x.sin for x in others])
         self.niqqud = np.concatenate([x.niqqud for x in others])
-        # self.kind = np.concatenate([x.kind for x in others])
-        self.shuffle()
         return self
 
     def shapes(self):
         return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape #, self.kind.shape
 
     def shuffle(self):
-        indices = np.random.permutation(len(self))
-        self.text = self.text[indices]
-        self.normalized = self.normalized[indices]
-        self.dagesh = self.dagesh[indices]
-        self.niqqud = self.niqqud[indices]
-        self.sin = self.sin[indices]
-        # self.kind = self.kind[indices]
+        utils.shuffle_in_unison(
+            self.text,
+            self.normalized,
+            self.dagesh,
+            self.niqqud,
+            self.sin
+        )
 
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
@@ -111,12 +107,6 @@ class Data:
         self.niqqud = pad(niqqud_table.to_ids(niqqud))
         self.text = pad(text, dtype='<U1', value=0)
         return self
-
-    def add_kind(self, path):
-        base = path.replace(os.path.sep, '/').split('/')
-        if len(base) > 1:
-            dirname = base[1]
-            self.kind = np.full(len(self), KINDS.index(dirname))
 
     def __len__(self):
         return self.normalized.shape[0]

@@ -256,6 +256,6 @@ def stuff(tokens):
 
 
 if __name__ == '__main__':
-    tokens = [t for t in collect_tokens(['hebrew_diacritized']) if t.strip_nonhebrew().items]
+    tokens = [t for t in collect_tokens(['hebrew_diacritized/modern/dont_panic']) if t.strip_nonhebrew().items]
     # stuff(tokens)
     print(len(tokens))

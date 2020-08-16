@@ -65,3 +65,10 @@ def pad_sequences(sequences, maxlen, dtype, value) -> np.ndarray:
         trunc = s[:maxlen]
         x[idx, :len(trunc)] = np.asarray(trunc, dtype=dtype)
     return x
+
+
+def shuffle_in_unison(*arrs):
+    rng_state = np.random.get_state()
+    for arr in arrs:
+        np.random.set_state(rng_state)
+        np.random.shuffle(arr)
