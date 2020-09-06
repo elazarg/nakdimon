@@ -31,7 +31,7 @@ ENDINGS_TO_REGULAR = dict(zip('ךםןףץ', 'כמנפצ'))
 
 def normalize(c):
     if c in VALID_LETTERS: return c
-    if c in ENDINGS_TO_REGULAR: return ENDINGS_TO_REGULAR(c)
+    if c in ENDINGS_TO_REGULAR: return ENDINGS_TO_REGULAR[c]
     if c in ['\n', '\t']: return ' '
     if c in ['־', '‒', '–', '—', '―', '−']: return '-'
     if c == '[': return '('
@@ -58,36 +58,6 @@ class HebrewItem(NamedTuple):
         return repr((self.letter, bool(self.dagesh), bool(self.sin), ord(self.niqqud or chr(0))))
 
 
-class HebrewCharacter:
-    ALEF = 'א'
-    BET = 'ב'
-    GIMEL = 'ג'
-    DALET = 'ד'
-    HE = 'ה'
-    VAV = 'ו'
-    ZAYIN = 'ז'
-    HET = 'ח'
-    TET = 'ט'
-    YOD = 'י'
-    KAF = 'כ'
-    KAF_SOFIT = 'ך'
-    LAMED = 'ל'
-    MEM = 'מ'
-    MEM_SOFIT = 'ם'
-    NUN = 'נ'
-    NUN_SOFIT = 'ן'
-    SAMECH = 'ס'
-    AYIN = 'ע'
-    PE = 'פ'
-    PE_SOFIT = 'ף'
-    TZADI = 'צ'
-    TZADI_SOFIT = 'ץ'
-    KOF = 'ק'
-    RESH = 'ר'
-    SHIN = 'ש'
-    TAV = 'ת'
-
-
 def is_hebrew_letter(letter: str) -> bool:
     return '\u05d0' <= letter <= '\u05ea'
 
@@ -102,6 +72,10 @@ def can_sin(letter):
 
 def can_niqqud(letter):
     return letter in ('אבגדהוזחטיכלמנסעפצקרשת' + 'ךן')
+
+
+def can_any(letter):
+    return can_niqqud(letter) or can_dagesh(letter) or can_sin(letter)
 
 
 def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
@@ -194,6 +168,9 @@ class Token:
     def __bool__(self):
         return bool(self.items)
 
+    def __eq__(self, other):
+        return self.items == other.items
+
     @lru_cache()
     def to_undotted(self):
         return ''.join(str(c.letter) for c in self.items)
@@ -256,6 +233,6 @@ def stuff(tokens):
 
 
 if __name__ == '__main__':
-    tokens = [t for t in collect_tokens(['hebrew_diacritized/modern/dont_panic']) if t.strip_nonhebrew().items]
+    tokens = [t for t in collect_tokens(['hebrew_diacritized/']) if t.strip_nonhebrew().items]
     # stuff(tokens)
     print(len(tokens))
