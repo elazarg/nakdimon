@@ -8,11 +8,27 @@ from functools import lru_cache
 # but instead it is decided not to. This helps the metrics be less biased
 RAFE = '\u05BF'
 
+
+class Niqqud:
+    SHVA = '\u05B0'
+    REDUCED_SEGOL = '\u05B1'
+    REDUCED_PATAKH = '\u05B2'
+    REDUCED_KAMATZ = '\u05B3'
+    HIRIK = '\u05B4'
+    TZEIRE = '\u05B5'
+    SEGOL = '\u05B6'
+    PATAKH = '\u05B7'
+    KAMATZ = '\u05B8'
+    HOLAM = '\u05B9'
+    KUBUTZ = '\u05BB'
+    SHURUK = '\u05BC'
+
+
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]
 
 NIQQUD = [RAFE] + [chr(c) for c in range(0x05b0, 0x05bc + 1)] + ['\u05b7']
 
-HOLAM = '\u05b9'
+HOLAM = Niqqud.HOLAM
 
 SHIN_YEMANIT = '\u05c1'
 SHIN_SMALIT = '\u05c2'
@@ -56,6 +72,37 @@ class HebrewItem(NamedTuple):
 
     def __repr__(self):
         return repr((self.letter, bool(self.dagesh), bool(self.sin), ord(self.niqqud or chr(0))))
+
+    def vocalize(self):
+        return self._replace(niqqud=vocalize_niqqud(self.niqqud),
+                             sin=self.sin.replace(RAFE, ''),
+                             dagesh=vocalize_dagesh(self.letter, self.dagesh))
+
+
+def vocalize_dagesh(letter, dagesh):
+    if letter not in 'בכפ':
+        return ''
+    return dagesh.replace(RAFE, '')
+
+
+def vocalize_niqqud(c):
+    # FIX: HOLAM / KUBBUTZ cannot be handled here correctly
+    if c in [Niqqud.KAMATZ, Niqqud.PATAKH, Niqqud.REDUCED_PATAKH]:
+        return Niqqud.PATAKH
+
+    if c in [Niqqud.HOLAM, Niqqud.REDUCED_KAMATZ]:
+        return Niqqud.HOLAM  # TODO: Kamatz-katan
+
+    if c in [Niqqud.SHURUK, Niqqud.KUBUTZ]:
+        return Niqqud.KUBUTZ
+
+    if c in [Niqqud.TZEIRE, Niqqud.SEGOL, Niqqud.REDUCED_SEGOL]:
+        return Niqqud.SEGOL
+
+    if c == Niqqud.SHVA:
+        return ''
+
+    return c.replace(RAFE, '')
 
 
 def is_hebrew_letter(letter: str) -> bool:
@@ -142,7 +189,6 @@ class Token:
     def __init__(self, items: List[HebrewItem]):
         self.items = items
 
-    @lru_cache()
     def __str__(self):
         return ''.join(str(c) for c in self.items)
 
