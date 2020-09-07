@@ -22,6 +22,7 @@ class Niqqud:
     HOLAM = '\u05B9'
     KUBUTZ = '\u05BB'
     SHURUK = '\u05BC'
+    METEG = '\u05BD'
 
 
 HEBREW_LETTERS = [chr(c) for c in range(0x05d0, 0x05ea + 1)]

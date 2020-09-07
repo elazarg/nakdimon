@@ -15,6 +15,7 @@ def extract_word(k):
 
 
 def call_dicta(text: str) -> str:
+    # TODO: split by 10,000
     url = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api'
 
     payload = {
@@ -28,7 +29,11 @@ def call_dicta(text: str) -> str:
         "keepmetagim": True,
     }
 
-    r = requests.post(url, json=payload, headers={'content-type': 'text/plain;charset=UTF-8'})
+    headers = {
+        'content-type': 'text/plain;charset=UTF-8'
+    }
+
+    r = requests.post(url, json=payload, headers=headers)
     return ''.join(extract_word(k) for k in r.json())
 
 
