@@ -1,21 +1,51 @@
 import requests
+import json
 
 from hebrew import Niqqud
 
 
-def extract_word(k):
-    if k['options']:
-        res = k['options'][0][0]
-        res = res.replace('|', '')
-        res = res.replace(Niqqud.KUBUTZ + 'ו' + Niqqud.METEG, 'ו' + Niqqud.SHURUK)
-        res = res.replace(Niqqud.HOLAM + 'ו' + Niqqud.METEG, 'ו' + Niqqud.HOLAM)
-        res = res.replace(Niqqud.METEG, '')
-        return res
-    return k['word']
+def call_snopi(text: str) -> str:
+    url = 'http://www.nakdan.com/GetResult.aspx'
+
+    payload = {
+        "txt": text,
+        "ktivmale": 'false',
+    }
+    headers = {
+        'Referer': 'http://www.nakdan.com/nakdan.aspx',
+    }
+
+    r = requests.post(url, data=payload, headers=headers)
+    return r.text.split('Result')[1][1:-2]
+
+
+def call_morfix(text: str) -> str:
+    url = 'https://nakdan.morfix.co.il/nikud/NikudText'
+
+    payload = {
+        "text": text,
+        "isLogged": 'false',
+    }
+    headers = {
+    }
+
+    r = requests.post(url, data=payload, headers=headers)
+    return json.loads(r.json()['nikud'])['OutputText']
 
 
 def call_dicta(text: str) -> str:
+    def extract_word(k):
+        if k['options']:
+            res = k['options'][0][0]
+            res = res.replace('|', '')
+            res = res.replace(Niqqud.KUBUTZ + 'ו' + Niqqud.METEG, 'ו' + Niqqud.SHURUK)
+            res = res.replace(Niqqud.HOLAM + 'ו' + Niqqud.METEG, 'ו' + Niqqud.HOLAM)
+            res = res.replace(Niqqud.METEG, '')
+            return res
+        return k['word']
+
     # TODO: split by 10,000
+
     url = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api'
 
     payload = {
@@ -28,7 +58,6 @@ def call_dicta(text: str) -> str:
         "patachma": False,
         "keepmetagim": True,
     }
-
     headers = {
         'content-type': 'text/plain;charset=UTF-8'
     }
