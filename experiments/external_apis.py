@@ -1,25 +1,63 @@
+from typing import List
 import requests
 import json
+from functools import wraps
+from cachier import cachier
 
 from hebrew import Niqqud
+import hebrew
 
 
-def call_snopi(text: str) -> str:
+def split_string_by_length(text: str, maxlen) -> List[str]:
+    return [''.join(s).strip() for s in hebrew.split_by_length(text, maxlen)]
+
+
+def piecewise(maxlen):
+    def inner(fetch):
+        @wraps(fetch)
+        def fetcher(text):
+            return ' '.join(fetch(chunk) for chunk in split_string_by_length(text, maxlen))
+        return fetcher
+    return inner
+
+
+@cachier()
+@piecewise(75)  # estimated maximum for reasonable time
+def fetch_snopi(text: str) -> str:
+    # Add bogus continuation in case there's only a single word
+    # so Snopi will not decide to answer with single-word-analysis
+    text = text + ' 1'
     url = 'http://www.nakdan.com/GetResult.aspx'
 
     payload = {
         "txt": text,
-        "ktivmale": 'false',
+        "ktivmale": 'true',
     }
     headers = {
         'Referer': 'http://www.nakdan.com/nakdan.aspx',
     }
 
     r = requests.post(url, data=payload, headers=headers)
-    return r.text.split('Result')[1][1:-2]
+    res = list(r.text.split('Result')[1][1:-2])
+    items = list(hebrew.iterate_dotted_text(res))
+
+    # print(hebrew.items_to_text(items))
+    # print(text)
+
+    for i in range(len(text)):
+        if text[i] != ' ' and items[i].letter == ' ':
+            del items[i]
+        elif text[i] != items[i].letter:
+            items.insert(i, hebrew.HebrewItem(text[i], '', '', '', ''))
+    res = hebrew.items_to_text(items)
+    assert hebrew.remove_niqqud(res) == text
+
+    return res[:-2]
 
 
-def call_morfix(text: str) -> str:
+@cachier()
+@piecewise(100)
+def fetch_morfix(text: str) -> str:
     url = 'https://nakdan.morfix.co.il/nikud/NikudText'
 
     payload = {
@@ -33,7 +71,9 @@ def call_morfix(text: str) -> str:
     return json.loads(r.json()['nikud'])['OutputText']
 
 
-def call_dicta(text: str) -> str:
+@cachier()
+@piecewise(10000)
+def fetch_dicta(text: str) -> str:
     def extract_word(k):
         if k['options']:
             res = k['options'][0][0]
@@ -43,8 +83,6 @@ def call_dicta(text: str) -> str:
             res = res.replace(Niqqud.METEG, '')
             return res
         return k['word']
-
-    # TODO: split by 10,000
 
     url = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api'
 
@@ -67,5 +105,5 @@ def call_dicta(text: str) -> str:
 
 
 if __name__ == '__main__':
-    text = 'מוקדם יותר היום, צה"ל ערך טקס חילופי מפקדים באוגדת עזה, כשהמפקד היוצא, תת אלוף אליעזר טולדנו, אמר כי "לחמאס לא אכפת מילדי הרצועה. עליהם לחדול מלחפור מנהרות כחיות השדה ולהשקיע את הבטון בבניית תשתיות לחסרי בית. עליהם לחדול מלייצר רקטות ולהשתמש בצינורות להקמת תשתית מים וביוב ראויה לילדיהם. עליהם לחדול מלזרוע משגרים ולקצור רקטות ולזרוע חיטה ולקצור תבואה".'
-    print(call_dicta(text))
+    text = 'ה"קפיטליסטית" של סוף המאה ה-19, ומהוות מופת לפעולה וולונטרית שאינה'
+    print(fetch_snopi(text))

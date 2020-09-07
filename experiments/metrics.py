@@ -1,6 +1,12 @@
 from typing import Tuple, List
 import hebrew
 
+__all__ = [
+    'metric_cha',
+    'metric_dec',
+    'metric_wor',
+]
+
 
 def metric_cha(actual: str, expected: str, *args, **kwargs) -> float:
     """
@@ -73,13 +79,22 @@ def mean_equal(*pair_iterables):
     return acc / total
 
 
+def get_diff(actual, expected):
+    for i, (a, e) in enumerate(zip(actual, expected)):
+        if a != e:
+            return f'{actual[i-15:i+15]} != {expected[i-15:i+15]}'
+    return ''
+
+
 def get_items(actual: str, expected: str, vocalize=False) -> Tuple[List[hebrew.HebrewItem], List[hebrew.HebrewItem]]:
     expected_hebrew = list(hebrew.iterate_dotted_text(expected))
     actual_hebrew = list(hebrew.iterate_dotted_text(actual))
     if vocalize:
         expected_hebrew = [x.vocalize() for x in expected_hebrew]
         actual_hebrew = [x.vocalize() for x in actual_hebrew]
-    assert [c.letter for c in expected_hebrew] == [c.letter for c in actual_hebrew]
+    diff = get_diff(''.join(c.letter for c in actual_hebrew),
+                    ''.join(c.letter for c in expected_hebrew))
+    assert not diff, diff
     return actual_hebrew, expected_hebrew
 
 

@@ -1,8 +1,11 @@
 import itertools
 from collections import defaultdict, Counter
 from typing import NamedTuple, Iterator, Iterable, List, Tuple
-import utils
 from functools import lru_cache
+import re
+
+import utils
+
 
 # "rafe" denotes a letter that would have been valid to add a diacritic of some category to
 # but instead it is decided not to. This helps the metrics be less biased
@@ -78,6 +81,10 @@ class HebrewItem(NamedTuple):
         return self._replace(niqqud=vocalize_niqqud(self.niqqud),
                              sin=self.sin.replace(RAFE, ''),
                              dagesh=vocalize_dagesh(self.letter, self.dagesh))
+
+
+def items_to_text(items: List[HebrewItem]) -> str:
+    return ''.join(str(item) for item in items).replace(RAFE, '')
 
 
 def vocalize_dagesh(letter, dagesh):
@@ -171,12 +178,20 @@ def iterate_file(path):
             raise
 
 
-def split_by_length(characters: Iterable[HebrewItem], maxlen: int):
+def is_space(c):
+    if isinstance(c, HebrewItem):
+        return c.letter == ' '
+    elif isinstance(c, str):
+        return c == ' '
+    assert False
+
+
+def split_by_length(characters: Iterable, maxlen: int):
     assert maxlen > 1
     out = []
     space = maxlen
     for c in characters:
-        if c.letter == ' ':
+        if is_space(c):
             space = len(out)
         out.append(c)
         if len(out) == maxlen - 1:
@@ -277,6 +292,10 @@ def stuff(tokens):
     # for k, v in word_dict.items():
     #     if "וו" in k:
     #         print(v)
+
+
+def remove_niqqud(text: str) -> str:
+    return re.sub('[\u0591-\u05C7]', '', text)
 
 
 if __name__ == '__main__':

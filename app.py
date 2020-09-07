@@ -3,7 +3,7 @@ Flask Serving
 """
 import flask
 
-import naqdan
+import nakdimon
 
 app = flask.Flask(__name__)
 
@@ -15,7 +15,7 @@ def diacritize():
         text = flask.request.files.get('text').read().decode('utf-8')
         if not text:
             return ""
-    response = flask.make_response(naqdan.diacritize_text(text), 200)
+    response = flask.make_response(nakdimon.diacritize_text(text), 200)
     response.mimetype = "text/plain"
     return response
 
