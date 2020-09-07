@@ -11,10 +11,25 @@ import hebrew
 model = load_model('models/modern.h5')
 
 
+def merge_unconditional(texts, tnss, nss, dss, sss):
+    res = []
+    for ts, tns, ns, ds, ss in zip(texts, tnss, nss, dss, sss):
+        sentence = []
+        for t, tn, n, d, s in zip(ts, tns, ns, ds, ss):
+            if tn == 0:
+                break
+            sentence.append(t)
+            sentence.append(dataset.dagesh_table.indices_char[d] if hebrew.can_dagesh(t) else '\uFEFF')
+            sentence.append(dataset.sin_table.indices_char[s] if hebrew.can_sin(t) else '\uFEFF')
+            sentence.append(dataset.niqqud_table.indices_char[n] if hebrew.can_niqqud(t) else '\uFEFF')
+        res.append(''.join(sentence))
+    return res
+
+
 def naqdan(data: dataset.Data) -> str:
     prediction = model.predict(data.normalized)
     [actual_niqqud, actual_dagesh, actual_sin] = [dataset.from_categorical(prediction[0]), dataset.from_categorical(prediction[1]), dataset.from_categorical(prediction[2])]
-    actual = dataset.merge(data.text, data.normalized, actual_niqqud, actual_dagesh, actual_sin)
+    actual = merge_unconditional(data.text, data.normalized, actual_niqqud, actual_dagesh, actual_sin)
     return ' '.join(actual)
 
 
@@ -32,5 +47,4 @@ def diacritize_file(input_filename='-', output_filename='-'):
 
 
 if __name__ == '__main__':
-    diacritize_file('../Neural-Sentiment-Analyzer-for-Modern-Hebrew/data/token_train.tsv',
-                    '../Neural-Sentiment-Analyzer-for-Modern-Hebrew/data/token_train_dotted.tsv')
+    diacritize_file('../rootem/ud/test_raw.txt', '-')
