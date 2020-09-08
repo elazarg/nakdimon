@@ -299,6 +299,6 @@ def remove_niqqud(text: str) -> str:
 
 
 if __name__ == '__main__':
-    tokens = [t for t in collect_tokens(['hebrew_diacritized/']) if t.strip_nonhebrew().items]
+    tokens = [t for t in collect_tokens(['test/']) if t.strip_nonhebrew().items]
     # stuff(tokens)
     print(len(tokens))

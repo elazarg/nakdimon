@@ -4,7 +4,7 @@ from experiments.metrics import *
 # import nakdimon
 
 SYSTEMS = {
-    'Snopi': external_apis.fetch_snopi,  # Too slow
+    # 'Snopi': external_apis.fetch_snopi,  # Too slow
     # 'Morfix': external_apis.fetch_morfix,  # terms-of-use issue
     'Nakdan': external_apis.fetch_dicta,
     # r'\sysname{}': nakdimon.call_nakdimon
@@ -13,7 +13,8 @@ SYSTEMS = {
 
 def format_latex(all_results):
     for system, results in all_results.items():
-        print('{system} & {cha:.2%} & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(system=system, **results).replace('%', ''))
+        print('{system} & {cha:.2%} & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(system=system, **results)
+              .replace('%', ''))
 
 
 def collect_metrics(actual, expected):
