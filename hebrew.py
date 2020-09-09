@@ -170,7 +170,7 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
 
 def iterate_file(path):
     with open(path, encoding='utf-8') as f:
-        text = ' '.join(f.read().split())
+        text = ''.join(s + ' ' for s in f.read().split())
         try:
             yield from iterate_dotted_text(text)
         except AssertionError as ex:
@@ -302,3 +302,7 @@ if __name__ == '__main__':
     tokens = [t for t in collect_tokens(['test/']) if t.strip_nonhebrew().items]
     # stuff(tokens)
     print(len(tokens))
+    for t in tokens:
+        vv = 'וו'
+        if vv in remove_niqqud(str(t)):
+            print(str(t).replace(RAFE, ''))
