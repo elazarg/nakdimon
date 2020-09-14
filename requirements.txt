@@ -1,0 +1,4 @@
+tensorflow
+tensorflowjs
+tensorflow-gpu
+wandb
