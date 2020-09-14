@@ -1,4 +1,6 @@
+numpy
 tensorflow
 tensorflowjs
-tensorflow-gpu
 wandb
+flask
+beautifulsoup4
