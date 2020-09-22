@@ -27,6 +27,7 @@ def fetch_snopi(text: str) -> str:
     # Add bogus continuation in case there's only a single word
     # so Snopi will not decide to answer with single-word-analysis
     text = text + ' 1'
+
     url = 'http://www.nakdan.com/GetResult.aspx'
 
     payload = {
@@ -40,9 +41,6 @@ def fetch_snopi(text: str) -> str:
     r = requests.post(url, data=payload, headers=headers)
     res = list(r.text.split('Result')[1][1:-2])
     items = list(hebrew.iterate_dotted_text(res))
-
-    # print(hebrew.items_to_text(items))
-    # print(text)
 
     for i in range(len(text)):
         if text[i] != ' ' and items[i].letter == ' ':
@@ -104,6 +102,21 @@ def fetch_dicta(text: str) -> str:
     return ''.join(extract_word(k) for k in r.json())
 
 
+@cachier()
+@piecewise(10000)
+def fetch_nakdimon(text: str) -> str:
+    url = 'http://127.0.0.1:5000'
+
+    payload = {
+        "text": text,
+    }
+    headers = {
+    }
+
+    r = requests.post(url, data=payload, headers=headers)
+    return r.text
+
+
 if __name__ == '__main__':
     text = 'ה"קפיטליסטית" של סוף המאה ה-19, ומהוות מופת לפעולה וולונטרית שאינה'
-    print(fetch_snopi(text))
+    print(fetch_nakdimon(text))

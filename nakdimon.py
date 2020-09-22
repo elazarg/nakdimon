@@ -8,8 +8,6 @@ import hebrew
 
 tf.config.set_visible_devices([], 'GPU')
 
-model = load_model('models/modern.h5')
-
 
 def merge_unconditional(texts, tnss, nss, dss, sss):
     res = []
@@ -27,6 +25,7 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
 
 
 def nakdimon(data: dataset.Data) -> str:
+    model = load_model('final_model/modern.h5')
     prediction = model.predict(data.normalized)
     [actual_niqqud, actual_dagesh, actual_sin] = [dataset.from_categorical(prediction[0]), dataset.from_categorical(prediction[1]), dataset.from_categorical(prediction[2])]
     actual = merge_unconditional(data.text, data.normalized, actual_niqqud, actual_dagesh, actual_sin)
