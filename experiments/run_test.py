@@ -33,6 +33,7 @@ def diacritize(sysname, filename):
 
 def diacritize_all(sysname):
     for filename in utils.iterate_files(['test']):
+        print(filename)
         diacritize(sysname, filename)
 
 
