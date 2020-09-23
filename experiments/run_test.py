@@ -9,10 +9,10 @@ from experiments.metrics import *
 
 
 SYSTEMS = {
-    # 'Snopi': external_apis.fetch_snopi,  # Too slow
-    # 'Morfix': external_apis.fetch_morfix,  # terms-of-use issue
-    # 'Nakdan': external_apis.fetch_dicta,
-    # 'Nakdimon': external_apis.fetch_nakdimon,
+    'Snopi': external_apis.fetch_snopi,  # Too slow
+    'Morfix': external_apis.fetch_morfix,  # terms-of-use issue
+    'Nakdan': external_apis.fetch_dicta,
+    'Nakdimon': external_apis.fetch_nakdimon,
 }
 
 
@@ -61,4 +61,4 @@ def run(filename):
 
 
 if __name__ == '__main__':
-    diacritize('NOP', 'test/books/1.txt')
+    diacritize_all('Nakdan')
