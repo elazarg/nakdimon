@@ -299,10 +299,11 @@ def remove_niqqud(text: str) -> str:
 
 
 if __name__ == '__main__':
-    tokens = [t for t in collect_tokens(['test/']) if t.strip_nonhebrew().items]
+
     # stuff(tokens)
     print(len(tokens))
-    for t in tokens:
-        vv = 'וו'
-        if vv in remove_niqqud(str(t)):
-            print(str(t).replace(RAFE, ''))
+    # for i, t in enumerate(tokens):
+    #     vv = 'פניה'
+    #     if vv == remove_niqqud(str(t)):
+    #         print(' '.join(str(x).replace(RAFE, '') for x in tokens[i-1:i+2]))
+
