@@ -1,11 +1,12 @@
 from typing import Tuple, List
+from pathlib import Path
+
+import numpy as np
+
 import hebrew
 
-__all__ = [
-    'metric_cha',
-    'metric_dec',
-    'metric_wor',
-]
+
+basepath = Path('test/expected')
 
 
 def metric_cha(actual: str, expected: str, *args, **kwargs) -> float:
@@ -98,24 +99,82 @@ def get_items(actual: str, expected: str, vocalize=False) -> Tuple[List[hebrew.H
     return actual_hebrew, expected_hebrew
 
 
-def read_expected_actual(actual_filename, expected_filename):
+def all_metrics(actual_filename, expected_filename):
+    # print(actual_filename)
+    # print(expected_filename)
     with open(expected_filename, encoding='utf8') as f:
         expected = f.read().strip()
 
     with open(actual_filename, encoding='utf8') as f:
         actual = f.read().strip()
 
-    return actual, expected
+    return {
+        'cha': metric_cha(actual, expected),
+        'dec': metric_dec(actual, expected),
+        'wor': metric_wor(actual, expected),
+        'voc': metric_wor(actual, expected, vocalize=True)
+    }
+
+
+def metricwise_mean(iterable):
+    items = list(iterable)
+    keys = items[0].keys()
+    return {
+        key: np.mean([item[key] for item in items])
+        for key in keys
+    }
+
+
+def format_latex(sysname, results):
+    print('{sysname} & {cha:.2%}  & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
+          .replace('%', ''))
+
+
+def macro_average(sysname):
+    return metricwise_mean(
+        metricwise_mean(all_metrics(file, str(file).replace("expected", sysname))
+                        for file in folder.iterdir())
+        for folder in basepath.iterdir()
+    )
+
+
+def micro_average(sysname):
+    return metricwise_mean(
+        all_metrics(file, str(file).replace("expected", sysname))
+        for folder in basepath.iterdir()
+        for file in folder.iterdir()
+    )
+
+
+def breakdown(sysname):
+    return {
+        folder.name: metricwise_mean(all_metrics(file, str(file).replace("expected", sysname))
+                                     for file in folder.iterdir())
+        for folder in basepath.iterdir()
+    }
 
 
 if __name__ == '__main__':
-    actual, expected = read_expected_actual('tmp_actual.txt', 'tmp_expected.txt')
-    print(f'CHA = {metric_cha(actual, expected):.2%}')
-    print(f'DEC = {metric_dec(actual, expected):.2%}')
-    print(f'WOR = {metric_wor(actual, expected):.2%}')
-    print()
-    print(f'VOC_CHA = {metric_cha(actual, expected, vocalize=True):.2%}')
-    print(f'VOC_DEC = {metric_dec(actual, expected, vocalize=True):.2%}')
-    print(f'VOC_WOR = {metric_wor(actual, expected, vocalize=True):.2%}')
-    print_different_words(actual, expected, vocalize=True)
+    SYSTEMS = ["Nakdimon"]  # , "Nakdan"]
+    for sysname in SYSTEMS:
+        results = macro_average(sysname)
+        format_latex(sysname, results)
 
+    for sysname in SYSTEMS:
+        results = micro_average(sysname)
+        format_latex(sysname, results)
+
+    for sysname in SYSTEMS:
+        results = breakdown(sysname)
+        print(results)
+
+    # actual, expected = read_expected_actual('tmp_actual.txt', 'tmp_expected.txt')
+    # print(f'CHA = {metric_cha(actual, expected):.2%}')
+    # print(f'DEC = {metric_dec(actual, expected):.2%}')
+    # print(f'WOR = {metric_wor(actual, expected):.2%}')
+    # print()
+    # print(f'VOC_CHA = {metric_cha(actual, expected, vocalize=True):.2%}')
+    # print(f'VOC_DEC = {metric_dec(actual, expected, vocalize=True):.2%}')
+    # print(f'VOC_WOR = {metric_wor(actual, expected, vocalize=True):.2%}')
+    # print_different_words(actual, expected, vocalize=True)
+    #

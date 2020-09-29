@@ -1,4 +1,5 @@
 import flask
+import werkzeug
 
 import nakdimon
 
@@ -11,8 +12,11 @@ def diacritize():
     if not text:
         text = flask.request.files.get('text').read().decode('utf-8')
         if not text:
-            return ""
-    response = flask.make_response(nakdimon.call_nakdimon(text), 200)
+            raise werkzeug.exceptions.BadRequest
+    print('request:', text)
+    actual = nakdimon.call_nakdimon(text)
+    print('result:', actual)
+    response = flask.make_response(actual, 200)
     response.mimetype = "text/plain"
     return response
 

@@ -39,6 +39,7 @@ def fetch_snopi(text: str) -> str:
     }
 
     r = requests.post(url, data=payload, headers=headers)
+    r.raise_for_status()
     res = list(r.text.split('Result')[1][1:-2])
     items = list(hebrew.iterate_dotted_text(res))
 
@@ -48,7 +49,7 @@ def fetch_snopi(text: str) -> str:
         elif text[i] != items[i].letter:
             items.insert(i, hebrew.HebrewItem(text[i], '', '', '', ''))
     res = hebrew.items_to_text(items)
-    assert hebrew.remove_niqqud(res) == text
+    assert hebrew.remove_niqqud(res) == text, f'{repr(res)}\n!=\n{repr(text)}'
 
     return res[:-2]
 
@@ -66,6 +67,7 @@ def fetch_morfix(text: str) -> str:
     }
 
     r = requests.post(url, data=payload, headers=headers)
+    r.raise_for_status()
     return json.loads(r.json()['nikud'])['OutputText']
 
 
@@ -99,6 +101,7 @@ def fetch_dicta(text: str) -> str:
     }
 
     r = requests.post(url, json=payload, headers=headers)
+    r.raise_for_status()
     return ''.join(extract_word(k) for k in r.json())
 
 
@@ -114,8 +117,18 @@ def fetch_nakdimon(text: str) -> str:
     }
 
     r = requests.post(url, data=payload, headers=headers)
+    r.raise_for_status()
     return r.text
 
+
+SYSTEMS = {
+    'Snopi': fetch_snopi,  # Too slow
+    'Morfix': fetch_morfix,  # terms-of-use issue
+    'Nakdan': fetch_dicta,
+    'Nakdimon': fetch_nakdimon,
+}
+
+fetch_nakdimon.clear_cache()
 
 if __name__ == '__main__':
     text = 'ה"קפיטליסטית" של סוף המאה ה-19, ומהוות מופת לפעולה וולונטרית שאינה'

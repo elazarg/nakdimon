@@ -13,7 +13,7 @@ assert tf.config.list_physical_devices('GPU')
 
 MAXLEN = 80
 BATCH_SIZE = 64
-UNITS = 512
+UNITS = 400
 
 
 def masked_metric(v, y_true):
@@ -21,7 +21,7 @@ def masked_metric(v, y_true):
     return tf.reduce_sum(tf.boolean_mask(v, mask)) / tf.cast(tf.math.count_nonzero(mask), tf.float32)
 
 
-def masked_accuracy(y_true, y_pred):
+def accuracy(y_true, y_pred):
     return masked_metric(tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred), y_true)
 
 
@@ -91,9 +91,10 @@ def train():
     model = build_model(units=UNITS)
     model.compile(loss=sparse_categorical_crossentropy,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
-                  metrics=masked_accuracy)
+                  metrics=accuracy)
 
-    model.save_weights('./checkpoints/uninit')
+    clr_mix = (3e-3, 8e-3, 0e-4)
+    lrs = [30e-4, 30e-4, 30e-4,  8e-4, 1e-4]
 
     config = {
         'batch_size': BATCH_SIZE,
@@ -101,22 +102,18 @@ def train():
         'units': UNITS,
         'model': model,
         'order': [
-            ('mix', (3e-3, 8e-3, 0), 'mix'),
-            ('modern', (4e-3, 2e-3, 5e-4), 'modern'),
-            ('modern', (27e-4, 11e-4, 8e-4), 'modern'),
-            ('modern', (15e-4, 10e-4, 5e-4), 'modern'),
-            ('modern', (12e-4, 8e-4, 5e-4), 'modern'),
-            ('modern', (8e-4, 8e-4, 1e-4), 'final'),
+              ('mix',    0, 1, schedulers.CircularLearningRate(*clr_mix, data['mix'][0], BATCH_SIZE)),
+              ('modern', 1, (1 + len(lrs)), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch - 1])),
         ],
     }
 
     run = wandb.init(project="dotter",
                      group="training",
-                     name=f'train',
+                     name=f'final',
                      tags=[],
                      config=config)
     with run:
-        for kind, clr, save in config['order']:
+        for kind, initial_epoch, epochs, scheduler in config['order']:
             train, validation = data[kind]
 
             training_data = (x, y) = get_xy(train)
@@ -125,16 +122,15 @@ def train():
             wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
                                                        training_data=training_data,
                                                        validation_data=validation_data,
+                                                       save_model=True,
                                                        log_weights=True)
 
-            scheduler = schedulers.CircularLearningRate(*clr)
-            scheduler.set_dataset(train, BATCH_SIZE)
-
             model.fit(x, y, validation_data=validation_data,
+                      epochs=epochs,
                       batch_size=BATCH_SIZE, verbose=1,
                       callbacks=[wandb_callback, scheduler])
 
-    model.save('./final_model/' + save + '.h5')
+    model.save('./final_model/final.h5')
 
 
 if __name__ == '__main__':

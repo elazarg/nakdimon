@@ -295,7 +295,7 @@ def stuff(tokens):
 
 
 def remove_niqqud(text: str) -> str:
-    return re.sub('[\u0591-\u05C7]', '', text)
+    return re.sub('[\u05B0-\u05BC]', '', text)
 
 
 if __name__ == '__main__':
