@@ -49,7 +49,7 @@ def fetch_snopi(text: str) -> str:
         elif text[i] != items[i].letter:
             items.insert(i, hebrew.HebrewItem(text[i], '', '', '', ''))
     res = hebrew.items_to_text(items)
-    assert hebrew.remove_niqqud(res) == text, f'{repr(res)}\n!=\n{repr(text)}'
+    assert hebrew.remove_niqqud(res) == text, f'{repr(hebrew.remove_niqqud(res))}\n!=\n{repr(text)}'
 
     return res[:-2]
 

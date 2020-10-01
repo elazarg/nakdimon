@@ -17,8 +17,8 @@ def diacritize(sysname, filename):
 
 def diacritize_all(sysname):
     for filename in utils.iterate_files([basepath]):
-        # if filename in [r'test\nrg\6.txt', r'test\president\6.txt']:
-        #    continue
+        if filename.endswith(r'\nrg\6.txt') or filename.endswith(r'president\6.txt'):
+           continue
         print(filename)
 
         actual = diacritize(sysname, filename)
@@ -31,5 +31,5 @@ def diacritize_all(sysname):
 
 
 if __name__ == '__main__':
-    diacritize_all('Nakdimon')
+    diacritize_all('Snopi')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))

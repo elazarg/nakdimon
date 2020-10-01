@@ -107,13 +107,15 @@ def all_metrics(actual_filename, expected_filename):
 
     with open(actual_filename, encoding='utf8') as f:
         actual = f.read().strip()
-
-    return {
-        'cha': metric_cha(actual, expected),
-        'dec': metric_dec(actual, expected),
-        'wor': metric_wor(actual, expected),
-        'voc': metric_wor(actual, expected, vocalize=True)
-    }
+    try:
+        return {
+            'cha': metric_cha(actual, expected),
+            'dec': metric_dec(actual, expected),
+            'wor': metric_wor(actual, expected),
+            'voc': metric_wor(actual, expected, vocalize=True)
+        }
+    except AssertionError as ex:
+        raise RuntimeError(actual_filename) from ex
 
 
 def metricwise_mean(iterable):
@@ -155,7 +157,8 @@ def breakdown(sysname):
 
 
 if __name__ == '__main__':
-    SYSTEMS = ["Nakdimon"]  # , "Nakdan"]
+    SYSTEMS = [# "Nakdimon", "Nakdan",
+               "Snopi"]
     for sysname in SYSTEMS:
         results = macro_average(sysname)
         format_latex(sysname, results)
@@ -165,8 +168,9 @@ if __name__ == '__main__':
         format_latex(sysname, results)
 
     for sysname in SYSTEMS:
-        results = breakdown(sysname)
-        print(results)
+        all_results = breakdown(sysname)
+        for source, results in all_results.items():
+            print(source, ",", ", ".join(str(x) for x in results.values()))
 
     # actual, expected = read_expected_actual('tmp_actual.txt', 'tmp_expected.txt')
     # print(f'CHA = {metric_cha(actual, expected):.2%}')

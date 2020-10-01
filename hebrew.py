@@ -7,8 +7,8 @@ import re
 import utils
 
 
-# "rafe" denotes a letter that would have been valid to add a diacritic of some category to
-# but instead it is decided not to. This helps the metrics be less biased
+# "rafe" denotes a letter to which it would have been valid to add a diacritic of some category
+# but instead it is decided not to. This makes the metrics less biased.
 RAFE = '\u05BF'
 
 
@@ -298,10 +298,17 @@ def remove_niqqud(text: str) -> str:
     return re.sub('[\u05B0-\u05BC\u05C1\u05C2]', '', text)
 
 
-if __name__ == '__main__':
+def average_wordlen(path):
+    token_lens = [len(t.strip_nonhebrew().items) for t in collect_tokens([path])
+                  if len(t.strip_nonhebrew().items) > 1]
+    import numpy as np
+    return np.mean(token_lens)
 
+
+if __name__ == '__main__':
+    print(average_wordlen('test/expected'))
     # stuff(tokens)
-    print(len(tokens))
+    # print(len(tokens))
     # for i, t in enumerate(tokens):
     #     vv = 'פניה'
     #     if vv == remove_niqqud(str(t)):
