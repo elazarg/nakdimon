@@ -8,7 +8,7 @@ import hebrew
 
 tf.config.set_visible_devices([], 'GPU')
 
-model = load_model('./modern.h5')
+model = load_model('./nakdimon0.h5')
 
 
 def naqdan(data: dataset.Data) -> str:
@@ -19,14 +19,19 @@ def naqdan(data: dataset.Data) -> str:
 
 
 def diacritize_text(text):
-    return naqdan(dataset.Data.from_text(hebrew.iterate_dotted_text(text), 82))
+    return naqdan(dataset.Data.from_text(hebrew.iterate_dotted_text(text), 64))
 
 
 def diacritize_file(input_filename='-', output_filename='-'):
-    text = naqdan(dataset.load_file(input_filename, 82))
+    text = naqdan(dataset.load_file(input_filename, 64))
     with utils.smart_open(output_filename, 'w', encoding='utf-8') as f:
         f.write(text)
 
 
 if __name__ == '__main__':
-    diacritize_file('test/hillel.txt')
+    from pathlib import Path
+    for p in Path('dictaTest/expected').glob('*'):
+        target = str(p).replace('expected', 'Nakdimon0')
+        print(target)
+        Path(target).parent.mkdir(parents=True, exist_ok=True)
+        diacritize_file(str(p), target)
