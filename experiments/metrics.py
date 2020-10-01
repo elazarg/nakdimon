@@ -83,7 +83,7 @@ def mean_equal(*pair_iterables):
 def get_diff(actual, expected):
     for i, (a, e) in enumerate(zip(actual, expected)):
         if a != e:
-            return f'{actual[i-15:i+15]} != {expected[i-15:i+15]}'
+            return f'\n{actual[i-15:i+15]}\n!=\n{expected[i-15:i+15]}'
     return ''
 
 
@@ -103,10 +103,10 @@ def all_metrics(actual_filename, expected_filename):
     # print(actual_filename)
     # print(expected_filename)
     with open(expected_filename, encoding='utf8') as f:
-        expected = f.read().strip()
+        expected = f.read().strip().replace('\n', ' ').replace('  ', ' ')
 
     with open(actual_filename, encoding='utf8') as f:
-        actual = f.read().strip()
+        actual = f.read().strip().replace('\n', ' ').replace('  ', ' ')
     try:
         return {
             'cha': metric_cha(actual, expected),
@@ -157,15 +157,23 @@ def breakdown(sysname):
 
 
 if __name__ == '__main__':
-    SYSTEMS = [# "Nakdimon", "Nakdan",
-               "Snopi"]
+    SYSTEMS = [
+        "Nakdimon",
+        "Nakdan",
+        "Snopi",
+        "Nakdimon0"
+    ]
     for sysname in SYSTEMS:
         results = macro_average(sysname)
         format_latex(sysname, results)
 
+    print()
+
     for sysname in SYSTEMS:
         results = micro_average(sysname)
         format_latex(sysname, results)
+
+    print()
 
     for sysname in SYSTEMS:
         all_results = breakdown(sysname)
