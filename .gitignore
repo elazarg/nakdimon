@@ -4,4 +4,5 @@ checkpoints
 .idea
 .vscode
 group*-shard*
-model.json
+models
+wandb

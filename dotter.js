@@ -92,7 +92,7 @@ function remove_niqqud(text) {
 async function load_model() {
     const bar = new Nanobar();
     console.time('load model');
-    const model = await tf.loadLayersModel('./models/model.json', {onProgress: (fraction) => { bar.go(100 * fraction); } });
+    const model = await tf.loadLayersModel('./final_model/model.json', {onProgress: (fraction) => { bar.go(100 * fraction); } });
     console.timeEnd('load model');
     model.summary();
 
