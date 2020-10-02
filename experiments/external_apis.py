@@ -112,6 +112,24 @@ def fetch_nakdimon(text: str) -> str:
 
     payload = {
         "text": text,
+        "model_name": 'final/final_model.h5'
+    }
+    headers = {
+    }
+
+    r = requests.post(url, data=payload, headers=headers)
+    r.raise_for_status()
+    return r.text
+
+
+@cachier()
+@piecewise(10000)
+def fetch_nakdimon_no_dicta(text: str) -> str:
+    url = 'http://127.0.0.1:5000'
+
+    payload = {
+        "text": text,
+        "model_name": 'models/without_dicta.h5'
     }
     headers = {
     }
@@ -126,6 +144,7 @@ SYSTEMS = {
     'Morfix': fetch_morfix,  # terms-of-use issue
     'Nakdan': fetch_dicta,
     'Nakdimon': fetch_nakdimon,
+    'NakdimonNoDicta': fetch_nakdimon_no_dicta,
 }
 
 fetch_nakdimon.clear_cache()

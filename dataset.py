@@ -70,6 +70,8 @@ class Data:
     sin: np.ndarray = None
     niqqud: np.ndarray = None
 
+    filenames: Tuple[str, ...] = ()
+
     @staticmethod
     def concatenate(others):
         self = Data()
@@ -116,31 +118,31 @@ class Data:
 
 
 def read_corpora(base_paths):
-    return [list(hebrew.iterate_file(path)) for path in utils.iterate_files(base_paths)]
+    return [(filename, list(hebrew.iterate_file(filename))) for filename in utils.iterate_files(base_paths)]
 
 
 def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True) -> Tuple[Data, Data]:
-    corpus = [Data.from_text(x, maxlen) for x in corpora]
+    corpus = [(filename, Data.from_text(heb_items, maxlen)) for (filename, heb_items) in corpora]
 
     validation_data = None
     if validation_rate > 0:
         np.random.shuffle(corpus)
-        # result = Data.concatenate(corpus)
-        # validation = result.split_validation(validation_rate)
-
-        size = sum(len(x) for x in corpus)
+        size = sum(len(x) for _, x in corpus)
         validation_size = size * validation_rate
         validation = []
+        validation_filenames: List[str] = []
         total_size = 0
         while total_size < validation_size:
             if abs(total_size - validation_size) < abs(total_size + len(corpus[-1]) - validation_size):
                 break
-            c = corpus.pop()
+            (filename, c) = corpus.pop()
             total_size += len(c)
             validation.append(c)
+            validation_filenames.append(filename)
         validation_data = Data.concatenate(validation)
+        validation_data.filenames = tuple(validation_filenames)
 
-    train = Data.concatenate(corpus)
+    train = Data.concatenate([c for (_, c) in corpus])
     if shuffle:
         train.shuffle()
     return train, validation_data

@@ -14,7 +14,9 @@ def diacritize():
         if not text:
             raise werkzeug.exceptions.BadRequest
     print('request:', text)
-    actual = nakdimon.call_nakdimon(text)
+    model_name = flask.request.values.get('model_name')
+    print('model_name:', model_name)
+    actual = nakdimon.predict(nakdimon.load_cached_model(model_name), text)
     print('result:', actual)
     response = flask.make_response(actual, 200)
     response.mimetype = "text/plain"

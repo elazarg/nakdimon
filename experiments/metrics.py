@@ -1,3 +1,4 @@
+import re
 from typing import Tuple, List
 from pathlib import Path
 
@@ -99,21 +100,36 @@ def get_items(actual: str, expected: str, vocalize=False) -> Tuple[List[hebrew.H
     return actual_hebrew, expected_hebrew
 
 
-def all_metrics(actual_filename, expected_filename):
-    # print(actual_filename)
-    # print(expected_filename)
+def all_metrics(actual, expected):
+    return {
+        'cha': metric_cha(actual, expected),
+        'dec': metric_dec(actual, expected),
+        'wor': metric_wor(actual, expected),
+        'voc': metric_wor(actual, expected, vocalize=True)
+    }
+
+
+def cleanup(text):
+    return re.sub(r'\s+', ' ', text.strip(), re.MULTILINE | re.DOTALL)
+
+
+def calculate_metrics(predict):
+    for file in Path('./validation/expected/modern/').glob('*'):
+        print(file)
+        with open(file, encoding='utf8') as f:
+            expected = cleanup(f.read())
+        actual = cleanup(predict(hebrew.remove_niqqud(expected)))
+        yield all_metrics(actual, expected)
+
+
+def all_metrics_for_files(actual_filename, expected_filename):
     with open(expected_filename, encoding='utf8') as f:
-        expected = f.read().strip().replace('\n', ' ').replace('  ', ' ')
+        expected = cleanup(f.read())
 
     with open(actual_filename, encoding='utf8') as f:
-        actual = f.read().strip().replace('\n', ' ').replace('  ', ' ')
+        actual = cleanup(f.read())
     try:
-        return {
-            'cha': metric_cha(actual, expected),
-            'dec': metric_dec(actual, expected),
-            'wor': metric_wor(actual, expected),
-            'voc': metric_wor(actual, expected, vocalize=True)
-        }
+        return all_metrics(actual, expected)
     except AssertionError as ex:
         raise RuntimeError(actual_filename) from ex
 
@@ -127,14 +143,9 @@ def metricwise_mean(iterable):
     }
 
 
-def format_latex(sysname, results):
-    print('{sysname} & {cha:.2%}  & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
-          .replace('%', ''))
-
-
 def macro_average(sysname):
     return metricwise_mean(
-        metricwise_mean(all_metrics(file, str(file).replace("expected", sysname))
+        metricwise_mean(all_metrics_for_files(file, str(file).replace("expected", sysname))
                         for file in folder.iterdir())
         for folder in basepath.iterdir()
     )
@@ -142,7 +153,7 @@ def macro_average(sysname):
 
 def micro_average(sysname):
     return metricwise_mean(
-        all_metrics(file, str(file).replace("expected", sysname))
+        all_metrics_for_files(file, str(file).replace("expected", sysname))
         for folder in basepath.iterdir()
         for file in folder.iterdir()
     )
@@ -150,18 +161,23 @@ def micro_average(sysname):
 
 def breakdown(sysname):
     return {
-        folder.name: metricwise_mean(all_metrics(file, str(file).replace("expected", sysname))
+        folder.name: metricwise_mean(all_metrics_for_files(file, str(file).replace("expected", sysname))
                                      for file in folder.iterdir())
         for folder in basepath.iterdir()
     }
 
 
+def format_latex(sysname, results):
+    print('{sysname} & {cha:.2%}  & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
+          .replace('%', ''))
+
+
 if __name__ == '__main__':
     SYSTEMS = [
-        "Nakdimon",
-        "Nakdan",
-        "Snopi",
-        "Nakdimon0"
+        # "Nakdimon",
+        # "Nakdan",
+        # "Snopi",
+        # "Nakdimon0"
     ]
     for sysname in SYSTEMS:
         results = macro_average(sysname)
@@ -170,23 +186,6 @@ if __name__ == '__main__':
     print()
 
     for sysname in SYSTEMS:
-        results = micro_average(sysname)
-        format_latex(sysname, results)
-
-    print()
-
-    for sysname in SYSTEMS:
         all_results = breakdown(sysname)
         for source, results in all_results.items():
             print(source, ",", ", ".join(str(x) for x in results.values()))
-
-    # actual, expected = read_expected_actual('tmp_actual.txt', 'tmp_expected.txt')
-    # print(f'CHA = {metric_cha(actual, expected):.2%}')
-    # print(f'DEC = {metric_dec(actual, expected):.2%}')
-    # print(f'WOR = {metric_wor(actual, expected):.2%}')
-    # print()
-    # print(f'VOC_CHA = {metric_cha(actual, expected, vocalize=True):.2%}')
-    # print(f'VOC_DEC = {metric_dec(actual, expected, vocalize=True):.2%}')
-    # print(f'VOC_WOR = {metric_wor(actual, expected, vocalize=True):.2%}')
-    # print_different_words(actual, expected, vocalize=True)
-    #
