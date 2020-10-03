@@ -1,4 +1,3 @@
-import re
 from typing import Tuple, List
 from pathlib import Path
 
@@ -110,12 +109,12 @@ def all_metrics(actual, expected):
 
 
 def cleanup(text):
-    return re.sub(r'\s+', ' ', text.strip(), re.MULTILINE | re.DOTALL)
+    return ' '.join(text.strip().split())
 
 
 def calculate_metrics(predict):
     for file in Path('./validation/expected/modern/').glob('*'):
-        print(file)
+        print(file, end='\r', flush=True)
         with open(file, encoding='utf8') as f:
             expected = cleanup(f.read())
         actual = cleanup(predict(hebrew.remove_niqqud(expected)))

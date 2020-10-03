@@ -149,66 +149,12 @@ def train(params: NakdimonParams):
                       batch_size=params.batch_size, verbose=2,
                       callbacks=[wandb_callback, scheduler])
         model.save(f'./models/ablations/{params.name}.h5')
+    return model
 
 
 class Full(NakdimonParams):
     validation_rate = 0
 
 
-class TrainingParams(NakdimonParams):
-    validation_rate = 0.1
-
-
-class FullTraining(TrainingParams):
-    def __init__(self, units=NakdimonParams.units):
-        self.units = units
-
-
-class SingleLayerSmall(TrainingParams):
-    def build_model(self):
-        inp = tf.keras.Input(shape=(None,), batch_size=None)
-        embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
-
-        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(embed)
-        layer = layers.Dense(self.units)(layer)
-
-        outputs = [
-            layers.Dense(NIQQUD_SIZE, name='N')(layer),
-            layers.Dense(DAGESH_SIZE, name='D')(layer),
-            layers.Dense(SIN_SIZE, name='S')(layer),
-        ]
-        return tf.keras.Model(inputs=inp, outputs=outputs)
-
-
-class SingleLayerLarge(SingleLayerSmall):
-    units = 557
-
-
-class ConstantLR(TrainingParams):
-    def __init__(self, lr_string):
-        self.lr = float(lr_string)
-        self.lr_string = lr_string
-
-    @property
-    def name(self):
-        return f'ConstantLR({self.lr_string})'
-
-    def epoch_params(self, data):
-        scheduler = tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: self.lr)
-        yield ('mix', 1, scheduler)
-        yield ('modern', 5, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: self.lr))
-
-
 if __name__ == '__main__':
-    # train(SingleLayerSmall())
-    # train(SingleLayerLarge())
-
-    train(ConstantLR('3e-4'))
-    train(ConstantLR('1e-3'))
-    train(ConstantLR('2e-3'))
-
-    # train(FullTraining(400))
-    train(FullTraining(800))
-    # import tensorflow as tf
-    # model = tf.keras.models.load_model('models/ablations/SingleLayerSmall.h5')
-    # print(evaluate_model(model))
+    train(Full())
