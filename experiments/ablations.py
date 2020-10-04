@@ -1,5 +1,8 @@
-from train import NakdimonParams
-from metrics import evaluate_model
+from pathlib import Path
+
+from train import NakdimonParams, train
+import metrics
+import hebrew
 
 
 class TrainingParams(NakdimonParams):
@@ -59,23 +62,48 @@ class ModernOnly(TrainingParams):
         yield ('modern', len(lrs), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch]))
 
 
+class Batch(TrainingParams):
+    def __init__(self, batch_size):
+        self.batch_size = batch_size
+
+    @property
+    def name(self):
+        return f'Batch({self.batch_size})'
+
+
+def calculate_metrics(model):
+    import nakdimon
+    for file in Path('./validation/expected/modern/').glob('*'):
+        print(file, end='\r', flush=True)
+        with open(file, encoding='utf8') as f:
+            expected = metrics.cleanup(f.read())
+        actual = metrics.cleanup(nakdimon.predict(model, hebrew.remove_niqqud(expected)))
+        yield metrics.all_metrics(actual, expected)
+
+
+def train_ablation(params):
+    model = train(params)
+    model.save(f'./models/ablations/{params.name}.h5')
+
+
 if __name__ == '__main__':
-    # train(SingleLayerSmall())
-    # train(SingleLayerLarge())
+    # train_ablation(SingleLayerSmall())
+    # train_ablation(SingleLayerLarge())
 
-    # train(ConstantLR('3e-4'))
-    # train(ConstantLR('1e-3'))
-    # train(ConstantLR('2e-3'))
+    # train_ablation(ConstantLR('3e-4'))
+    # train_ablation(ConstantLR('1e-3'))
+    # train_ablation(ConstantLR('2e-3'))
 
-    # train(FullTraining(400))
-    # train(FullTraining(800))
-    # train(ConstantLR('3e-3'))
-    # train(ModernOnly())
-    import os
-    import tensorflow as tf
+    # train_ablation(FullTraining(400))
+    # train_ablation(FullTraining(800))
+    # train_ablation(ConstantLR('3e-3'))
+    # train_ablation(ModernOnly())
+    train_ablation(Batch(32))
 
-    tf.config.set_visible_devices([], 'GPU')
-    for model_name in os.listdir('models/ablations/'):
-        if 'ModernOnly' in model_name:
-            model = tf.keras.models.load_model('models/ablations/' + model_name)
-            print(model_name, evaluate_model(model))
+    # import os
+    # import tensorflow as tf
+    #
+    # tf.config.set_visible_devices([], 'GPU')
+    # for model_name in os.listdir('models/ablations/'):
+    #     model = tf.keras.models.load_model('models/ablations/' + model_name)
+    #     print(model_name, calculate_metrics(model))

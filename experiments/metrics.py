@@ -93,8 +93,8 @@ def get_items(actual: str, expected: str, vocalize=False) -> Tuple[List[hebrew.H
     if vocalize:
         expected_hebrew = [x.vocalize() for x in expected_hebrew]
         actual_hebrew = [x.vocalize() for x in actual_hebrew]
-    diff = get_diff(''.join(c.letter for c in actual_hebrew),
-                    ''.join(c.letter for c in expected_hebrew))
+    diff = get_diff(repr(''.join(c.letter for c in actual_hebrew)),
+                    repr(''.join(c.letter for c in expected_hebrew)))
     assert not diff, diff
     return actual_hebrew, expected_hebrew
 
@@ -110,15 +110,6 @@ def all_metrics(actual, expected):
 
 def cleanup(text):
     return ' '.join(text.strip().split())
-
-
-def calculate_metrics(predict):
-    for file in Path('./validation/expected/modern/').glob('*'):
-        print(file, end='\r', flush=True)
-        with open(file, encoding='utf8') as f:
-            expected = cleanup(f.read())
-        actual = cleanup(predict(hebrew.remove_niqqud(expected)))
-        yield all_metrics(actual, expected)
 
 
 def all_metrics_for_files(actual_filename, expected_filename):
@@ -143,26 +134,31 @@ def metricwise_mean(iterable):
 
 
 def macro_average(sysname):
+    testpath = Path(str(basepath).replace("expected", sysname))
     return metricwise_mean(
-        metricwise_mean(all_metrics_for_files(file, str(file).replace("expected", sysname))
+        metricwise_mean(all_metrics_for_files(str(file).replace(sysname, "expected"), file)
                         for file in folder.iterdir())
-        for folder in basepath.iterdir()
+        for folder in testpath.iterdir()
+        if list(folder.iterdir())
     )
 
 
 def micro_average(sysname):
+    testpath = Path(str(basepath).replace("expected", sysname))
     return metricwise_mean(
-        all_metrics_for_files(file, str(file).replace("expected", sysname))
-        for folder in basepath.iterdir()
+        all_metrics_for_files(str(file).replace(sysname, "expected"), file)
+        for folder in testpath.iterdir() if list(folder.iterdir())
         for file in folder.iterdir()
     )
 
+# TODO: concatenate and average
 
 def breakdown(sysname):
+    testpath = Path(str(basepath).replace("expected", sysname))
     return {
-        folder.name: metricwise_mean(all_metrics_for_files(file, str(file).replace("expected", sysname))
+        folder.name: metricwise_mean(all_metrics_for_files(str(file).replace(sysname, "expected"), file)
                                      for file in folder.iterdir())
-        for folder in basepath.iterdir()
+        for folder in testpath.iterdir()
     }
 
 
@@ -177,9 +173,16 @@ if __name__ == '__main__':
         # "Nakdan",
         # "Snopi",
         # "Nakdimon0"
+        "Morfix"
     ]
     for sysname in SYSTEMS:
         results = macro_average(sysname)
+        format_latex(sysname, results)
+
+    print()
+
+    for sysname in SYSTEMS:
+        results = micro_average(sysname)
         format_latex(sysname, results)
 
     print()

@@ -93,12 +93,6 @@ def load_data(params: NakdimonParams):
     return data
 
 
-def evaluate_model(model):
-    import metrics
-    import nakdimon
-    return metrics.metricwise_mean(metrics.calculate_metrics(lambda text: nakdimon.predict(model, text)))
-
-
 LETTERS_SIZE = len(dataset.letters_table)
 NIQQUD_SIZE = len(dataset.niqqud_table)
 DAGESH_SIZE = len(dataset.dagesh_table)
@@ -148,7 +142,6 @@ def train(params: NakdimonParams):
                       epochs=last_epoch,
                       batch_size=params.batch_size, verbose=2,
                       callbacks=[wandb_callback, scheduler])
-        model.save(f'./models/ablations/{params.name}.h5')
     return model
 
 
@@ -157,4 +150,5 @@ class Full(NakdimonParams):
 
 
 if __name__ == '__main__':
-    train(Full())
+    model = train(Full())
+    model.save(f'./final_model/final.h5')
