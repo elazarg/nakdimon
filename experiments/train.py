@@ -135,8 +135,8 @@ def train(params: NakdimonParams):
             wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
                                                        training_data=training_data,
                                                        validation_data=validation_data,
-                                                       save_model=True,
-                                                       log_weights=True)
+                                                       save_model=False,
+                                                       log_weights=False)
             last_epoch += n_epochs
             model.fit(x, y, validation_data=validation_data,
                       epochs=last_epoch,

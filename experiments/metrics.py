@@ -6,7 +6,7 @@ import numpy as np
 import hebrew
 
 
-basepath = Path('test/expected')
+basepath = Path('test_dicta/expected')
 
 
 def metric_cha(actual: str, expected: str, *args, **kwargs) -> float:
@@ -136,7 +136,7 @@ def metricwise_mean(iterable):
 def macro_average(sysname):
     testpath = Path(str(basepath).replace("expected", sysname))
     return metricwise_mean(
-        metricwise_mean(all_metrics_for_files(str(file).replace(sysname, "expected"), file)
+        metricwise_mean(all_metrics_for_files(expected_path(file, sysname), file)
                         for file in folder.iterdir())
         for folder in testpath.iterdir()
         if list(folder.iterdir())
@@ -146,17 +146,22 @@ def macro_average(sysname):
 def micro_average(sysname):
     testpath = Path(str(basepath).replace("expected", sysname))
     return metricwise_mean(
-        all_metrics_for_files(str(file).replace(sysname, "expected"), file)
+        all_metrics_for_files(expected_path(file, sysname), file)
         for folder in testpath.iterdir() if list(folder.iterdir())
         for file in folder.iterdir()
     )
+
+
+def expected_path(file, sysname):
+    return str(file).replace("\\" + sysname + "\\", "\\expected\\")
+
 
 # TODO: concatenate and average
 
 def breakdown(sysname):
     testpath = Path(str(basepath).replace("expected", sysname))
     return {
-        folder.name: metricwise_mean(all_metrics_for_files(str(file).replace(sysname, "expected"), file)
+        folder.name: metricwise_mean(all_metrics_for_files(expected_path(file, sysname), file)
                                      for file in folder.iterdir())
         for folder in testpath.iterdir()
     }
@@ -171,9 +176,9 @@ if __name__ == '__main__':
     SYSTEMS = [
         # "Nakdimon",
         # "Nakdan",
-        # "Snopi",
+        "Snopi",
         # "Nakdimon0"
-        "Morfix"
+        # "Morfix"
     ]
     for sysname in SYSTEMS:
         results = macro_average(sysname)
