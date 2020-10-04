@@ -295,7 +295,7 @@ def stuff(tokens):
 
 
 def remove_niqqud(text: str) -> str:
-    return re.sub('[\u05B0-\u05BC\u05C1\u05C2]', '', text)
+    return re.sub('[\u05B0-\u05BC\u05C1\u05C2ׇ\u05c7]', '', text)
 
 
 def average_wordlen(path):
