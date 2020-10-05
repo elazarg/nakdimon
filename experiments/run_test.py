@@ -31,5 +31,6 @@ def diacritize_all(sysname):
 
 
 if __name__ == '__main__':
-    diacritize_all('Snopi')
+    # diacritize_all('NakdimonValidation')
+    diacritize_all('Nakdan')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))

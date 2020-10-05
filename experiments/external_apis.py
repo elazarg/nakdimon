@@ -1,7 +1,9 @@
 from typing import List
-import requests
+import re
 import json
 from functools import wraps
+
+import requests
 from cachier import cachier
 
 from hebrew import Niqqud
@@ -81,6 +83,10 @@ def fetch_dicta(text: str) -> str:
             res = res.replace(Niqqud.KUBUTZ + 'ו' + Niqqud.METEG, 'ו' + Niqqud.SHURUK)
             res = res.replace(Niqqud.HOLAM + 'ו' + Niqqud.METEG, 'ו' + Niqqud.HOLAM)
             res = res.replace(Niqqud.METEG, '')
+
+            res = re.sub(Niqqud.KAMATZ + 'ו' + '(?=[א-ת])', 'ו' + Niqqud.HOLAM, res)
+            res = res.replace(Niqqud.REDUCED_KAMATZ + 'ו', 'ו' + Niqqud.HOLAM)
+
             return res
         return k['word']
 
@@ -139,15 +145,34 @@ def fetch_nakdimon_no_dicta(text: str) -> str:
     return r.text
 
 
+@cachier()
+@piecewise(10000)
+def fetch_nakdimon_validation(text: str) -> str:
+    url = 'http://127.0.0.1:5000'
+
+    payload = {
+        "text": text,
+        "model_name": 'models/ablations/Full(400).h5'
+    }
+    headers = {
+    }
+
+    r = requests.post(url, data=payload, headers=headers)
+    r.raise_for_status()
+    return r.text
+
+
 SYSTEMS = {
     'Snopi': fetch_snopi,  # Too slow
     'Morfix': fetch_morfix,  # terms-of-use issue
     'Nakdan': fetch_dicta,
     'Nakdimon': fetch_nakdimon,
     'NakdimonNoDicta': fetch_nakdimon_no_dicta,
+    'NakdimonValidation': fetch_nakdimon_validation
 }
 
 fetch_nakdimon.clear_cache()
+# fetch_dicta.clear_cache()
 
 if __name__ == '__main__':
     text = 'ה"קפיטליסטית" של סוף המאה ה-19, ומהוות מופת לפעולה וולונטרית שאינה'
