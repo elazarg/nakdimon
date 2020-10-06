@@ -1,18 +1,10 @@
 from pathlib import Path
 
-from train import NakdimonParams, train
 import tensorflow as tf
+
+from train import TrainingParams, train
 import metrics
 import hebrew
-
-
-class TrainingParams(NakdimonParams):
-    validation_rate = 0.1
-    maxlen = 72
-
-    @property
-    def name(self):
-        return f'({self.maxlen})' + type(self).__name__
 
 
 class FullTraining(TrainingParams):
@@ -21,13 +13,14 @@ class FullTraining(TrainingParams):
     def name(self):
         return f'Full({self.units})'
 
-    def __init__(self, units=NakdimonParams.units):
+    def __init__(self, units=TrainingParams.units):
         self.units = units
 
 
 class SingleLayerSmall(TrainingParams):
     def build_model(self):
-        from train import tf, layers, LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        from train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        layers = tf.keras.layers
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)
         embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
@@ -51,7 +44,8 @@ class SplitSin(TrainingParams):
     units = 400
 
     def build_model(self):
-        from train import tf, layers, LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        from train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        layers = tf.keras.layers
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)
         embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
@@ -71,7 +65,6 @@ class SplitSin(TrainingParams):
 
 
 class UnmaskedLoss(TrainingParams):
-    maxlen = 72
     def loss(self, y_true, y_pred):
         return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True)
 
@@ -131,6 +124,7 @@ def train_ablation(params):
 
 
 if __name__ == '__main__':
+    from pretrain import Pretrained
     # train_ablation(ModernOnly())
 
     # train_ablation(ConstantLR('3e-4'))
@@ -148,10 +142,11 @@ if __name__ == '__main__':
     # train_ablation(Chunk(64))
     # train_ablation(SplitSin())
 
-    import os
-    tf.config.set_visible_devices([], 'GPU')
-    for model_name in ['Full(800).h5',  # '(72)SingleLayerLarge.h5',
-                       # '(72)SingleLayerSmall.h5', 'ConstantLR(1e-3).h5'
-                       ]:
-        model = tf.keras.models.load_model('models/ablations/72/' + model_name, custom_objects={'loss': NakdimonParams().loss})
-        print(model_name, *metrics.metricwise_mean(calculate_metrics(model)).values(), sep=', ')
+    train_ablation(Pretrained())
+    # import os
+    # tf.config.set_visible_devices([], 'GPU')
+    # for model_name in ['Full(800).h5',  # '(72)SingleLayerLarge.h5',
+    #                    # '(72)SingleLayerSmall.h5', 'ConstantLR(1e-3).h5'
+    #                    ]:
+    #     model = tf.keras.models.load_model('models/ablations/72/' + model_name, custom_objects={'loss': NakdimonParams().loss})
+    #     print(model_name, *metrics.metricwise_mean(calculate_metrics(model)).values(), sep=', ')

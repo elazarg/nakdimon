@@ -313,4 +313,3 @@ if __name__ == '__main__':
     #     vv = 'פניה'
     #     if vv == remove_niqqud(str(t)):
     #         print(' '.join(str(x).replace(RAFE, '') for x in tokens[i-1:i+2]))
-

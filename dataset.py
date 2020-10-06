@@ -1,6 +1,5 @@
 from typing import Tuple, List
 
-import os
 import numpy as np
 
 import hebrew
@@ -32,6 +31,12 @@ letters_table = CharacterTable(hebrew.SPECIAL_TOKENS + hebrew.VALID_LETTERS)
 dagesh_table = CharacterTable(hebrew.DAGESH)
 sin_table = CharacterTable(hebrew.NIQQUD_SIN)
 niqqud_table = CharacterTable(hebrew.NIQQUD)
+
+LETTERS_SIZE = len(letters_table)
+NIQQUD_SIZE = len(niqqud_table)
+DAGESH_SIZE = len(dagesh_table)
+SIN_SIZE = len(sin_table)
+
 
 
 def print_tables():

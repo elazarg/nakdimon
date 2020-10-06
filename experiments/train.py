@@ -6,6 +6,7 @@ import tensorflow as tf
 import wandb
 
 import dataset
+from dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
 import schedulers
 
 assert tf.config.list_physical_devices('GPU')
@@ -74,6 +75,10 @@ class NakdimonParams:
         return tf.keras.Model(inputs=inp, outputs=outputs)
 
 
+class TrainingParams(NakdimonParams):
+    validation_rate = 0.1
+
+
 def get_xy(d):
     if d is None:
         return None
@@ -90,12 +95,6 @@ def load_data(params: NakdimonParams):
         data[stage_name] = dataset.load_data(dataset.read_corpora(stage_dataset_filenames),
                                              validation_rate=params.validation_rate, maxlen=params.maxlen)
     return data
-
-
-LETTERS_SIZE = len(dataset.letters_table)
-NIQQUD_SIZE = len(dataset.niqqud_table)
-DAGESH_SIZE = len(dataset.dagesh_table)
-SIN_SIZE = len(dataset.sin_table)
 
 
 def train(params: NakdimonParams):
@@ -136,11 +135,14 @@ def train(params: NakdimonParams):
                                                        validation_data=validation_data,
                                                        save_model=False,
                                                        log_weights=False)
-            last_epoch += n_epochs
+
             model.fit(x, y, validation_data=validation_data,
-                      epochs=last_epoch,
+                      initial_epoch=last_epoch,
+                      epochs=last_epoch + n_epochs,
                       batch_size=params.batch_size, verbose=2,
                       callbacks=[wandb_callback, scheduler])
+
+            last_epoch += n_epochs
     return model
 
 
