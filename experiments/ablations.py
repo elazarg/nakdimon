@@ -1,12 +1,18 @@
 from pathlib import Path
 
 from train import NakdimonParams, train
+import tensorflow as tf
 import metrics
 import hebrew
 
 
 class TrainingParams(NakdimonParams):
     validation_rate = 0.1
+    maxlen = 72
+
+    @property
+    def name(self):
+        return f'({self.maxlen})' + type(self).__name__
 
 
 class FullTraining(TrainingParams):
@@ -21,7 +27,7 @@ class FullTraining(TrainingParams):
 
 class SingleLayerSmall(TrainingParams):
     def build_model(self):
-        from train import tf, layers, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        from train import tf, layers, LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)
         embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
@@ -39,6 +45,35 @@ class SingleLayerSmall(TrainingParams):
 
 class SingleLayerLarge(SingleLayerSmall):
     units = 557
+
+
+class SplitSin(TrainingParams):
+    units = 400
+
+    def build_model(self):
+        from train import tf, layers, LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+
+        inp = tf.keras.Input(shape=(None,), batch_size=None)
+        embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
+
+        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(embed)
+        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(layer)
+        layer = layers.Dense(self.units)(layer)
+
+        sin_layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(embed)
+
+        outputs = [
+            layers.Dense(NIQQUD_SIZE, name='N')(layer),
+            layers.Dense(DAGESH_SIZE, name='D')(layer),
+            layers.Dense(SIN_SIZE, name='S')(sin_layer),
+        ]
+        return tf.keras.Model(inputs=inp, outputs=outputs)
+
+
+class UnmaskedLoss(TrainingParams):
+    maxlen = 72
+    def loss(self, y_true, y_pred):
+        return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True)
 
 
 class ConstantLR(TrainingParams):
@@ -83,7 +118,7 @@ class Batch(TrainingParams):
 def calculate_metrics(model):
     import nakdimon
     for file in Path('./validation/expected/modern/').glob('*'):
-        print(file, ' ' * 20, end='\r', flush=True)
+        print(file, ' ' * 30, end='\r', flush=True)
         with open(file, encoding='utf8') as f:
             expected = metrics.cleanup(f.read())
         actual = metrics.cleanup(nakdimon.predict(model, hebrew.remove_niqqud(expected)))
@@ -92,29 +127,31 @@ def calculate_metrics(model):
 
 def train_ablation(params):
     model = train(params)
-    model.save(f'./models/ablations/{params.name}.h5')
+    model.save(f'./models/ablations/72/{params.name}.h5')
 
 
 if __name__ == '__main__':
-    # train_ablation(SingleLayerSmall())
-    # train_ablation(SingleLayerLarge())
+    # train_ablation(ModernOnly())
 
     # train_ablation(ConstantLR('3e-4'))
     # train_ablation(ConstantLR('1e-3'))
     # train_ablation(ConstantLR('2e-3'))
 
-    # train_ablation(FullTraining(400))
+    # train_ablation(SingleLayerSmall())
+    # train_ablation(SingleLayerLarge())
+
+    # train_ablation(UnmaskedLoss())
     # train_ablation(FullTraining(800))
     # train_ablation(ConstantLR('3e-3'))
-    # train_ablation(ModernOnly())
     # train_ablation(Batch(128))
     #
     # train_ablation(Chunk(64))
-    import os
-    import tensorflow as tf
+    # train_ablation(SplitSin())
 
+    import os
     tf.config.set_visible_devices([], 'GPU')
-    for model_name in os.listdir('models/ablations/'):
-        if 'Chunk(64)' in model_name:
-            model = tf.keras.models.load_model('models/ablations/' + model_name)
-            print(model_name, metrics.metricwise_mean(calculate_metrics(model)))
+    for model_name in ['Full(800).h5',  # '(72)SingleLayerLarge.h5',
+                       # '(72)SingleLayerSmall.h5', 'ConstantLR(1e-3).h5'
+                       ]:
+        model = tf.keras.models.load_model('models/ablations/72/' + model_name, custom_objects={'loss': NakdimonParams().loss})
+        print(model_name, *metrics.metricwise_mean(calculate_metrics(model)).values(), sep=', ')

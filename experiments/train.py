@@ -11,6 +11,15 @@ import schedulers
 assert tf.config.list_physical_devices('GPU')
 
 
+def masked_metric(v, y_true):
+    mask = tf.math.not_equal(y_true, 0)
+    return tf.reduce_sum(tf.boolean_mask(v, mask)) / tf.cast(tf.math.count_nonzero(mask), tf.float32)
+
+
+def accuracy(y_true, y_pred):
+    return masked_metric(tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred), y_true)
+
+
 class NakdimonParams:
     @property
     def name(self):
@@ -33,6 +42,9 @@ class NakdimonParams:
     }
 
     validation_rate = 0
+
+    def loss(self, y_true, y_pred):
+        return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
 
     def epoch_params(self, data):
         yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 0e-4, data['mix'][0], self.batch_size))
@@ -60,19 +72,6 @@ class NakdimonParams:
             layers.Dense(SIN_SIZE, name='S')(layer),
         ]
         return tf.keras.Model(inputs=inp, outputs=outputs)
-
-
-def masked_metric(v, y_true):
-    mask = tf.math.not_equal(y_true, 0)
-    return tf.reduce_sum(tf.boolean_mask(v, mask)) / tf.cast(tf.math.count_nonzero(mask), tf.float32)
-
-
-def accuracy(y_true, y_pred):
-    return masked_metric(tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred), y_true)
-
-
-def sparse_categorical_crossentropy(y_true, y_pred):
-    return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
 
 
 def get_xy(d):
@@ -104,7 +103,7 @@ def train(params: NakdimonParams):
     data = load_data(params)
 
     model = params.build_model()
-    model.compile(loss=sparse_categorical_crossentropy,
+    model.compile(loss=params.loss,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
                   metrics=accuracy)
 
