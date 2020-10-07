@@ -28,8 +28,8 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
     return res
 
 
-def predict(model: tf.Module, text: str) -> str:
-    data = dataset.Data.from_text(hebrew.iterate_dotted_text(text), 10000)
+def predict(model: tf.Module, text: str, maxlen=10000) -> str:
+    data = dataset.Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
     prediction = model.predict(data.normalized)
     [actual_niqqud, actual_dagesh, actual_sin] = [dataset.from_categorical(prediction[0]), dataset.from_categorical(prediction[1]), dataset.from_categorical(prediction[2])]
     actual = merge_unconditional(data.text, data.normalized, actual_niqqud, actual_dagesh, actual_sin)

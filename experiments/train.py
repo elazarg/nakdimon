@@ -97,7 +97,7 @@ def load_data(params: NakdimonParams):
     return data
 
 
-def train(params: NakdimonParams):
+def train(params: NakdimonParams, ablation=None):
 
     data = load_data(params)
 
@@ -114,7 +114,7 @@ def train(params: NakdimonParams):
     }
 
     run = wandb.init(project="dotter",
-                     group="ablations",
+                     group="ablations_final",
                      name=params.name,
                      tags=[],
                      config=config)
@@ -141,8 +141,9 @@ def train(params: NakdimonParams):
                       epochs=last_epoch + n_epochs,
                       batch_size=params.batch_size, verbose=2,
                       callbacks=[wandb_callback, scheduler])
-
             last_epoch += n_epochs
+        if ablation is not None:
+            wandb.log({'final': 0, **ablation(model)})
     return model
 
 

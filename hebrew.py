@@ -150,15 +150,15 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
 
         if is_hebrew_letter(normalized):
             if text[i] == DAGESH_LETTER:
-                assert dagesh == RAFE, (text[i-5:i+5])
+                # assert dagesh == RAFE, (text[i-5:i+5])
                 dagesh = text[i]
                 i += 1
             if text[i] in NIQQUD_SIN:
-                assert sin == RAFE, (text[i-5:i+5])
+                # assert sin == RAFE, (text[i-5:i+5])
                 sin = text[i]
                 i += 1
             if text[i] in NIQQUD:
-                assert niqqud == RAFE, (text[i-5:i+5])
+                # assert niqqud == RAFE, (text[i-5:i+5])
                 niqqud = text[i]
                 i += 1
             if letter == 'ו' and dagesh == DAGESH_LETTER and niqqud == RAFE:

@@ -90,6 +90,11 @@ class ModernOnly(TrainingParams):
         yield ('modern', len(lrs), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch]))
 
 
+class Quick(TrainingParams):
+    def epoch_params(self, data):
+        yield ('modern', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 3e-3))
+
+
 class Chunk(TrainingParams):
     def __init__(self, maxlen):
         self.maxlen = maxlen
@@ -110,43 +115,45 @@ class Batch(TrainingParams):
 
 def calculate_metrics(model):
     import nakdimon
-    for file in Path('./validation/expected/modern/').glob('*'):
+    for file in Path('tests/validation/expected/modern/').glob('*'):
         print(file, ' ' * 30, end='\r', flush=True)
         with open(file, encoding='utf8') as f:
             expected = metrics.cleanup(f.read())
-        actual = metrics.cleanup(nakdimon.predict(model, hebrew.remove_niqqud(expected)))
+        actual = metrics.cleanup(nakdimon.predict(model, hebrew.remove_niqqud(expected), maxlen=200))
         yield metrics.all_metrics(actual, expected)
 
 
 def train_ablation(params):
-    model = train(params)
-    model.save(f'./models/ablations/72/{params.name}.h5')
+    def ablation(model):
+        return metrics.metricwise_mean(calculate_metrics(model))
+    model = train(params, ablation)
+    model.save(f'./models/ablations/{params.name}.h5')
 
 
 if __name__ == '__main__':
-    from pretrain import Pretrained
-    # train_ablation(ModernOnly())
+    FullTraining(600)
+    # for _ in range(5):
+    #     # train_ablation(ModernOnly())
+    #     # train_ablation(FullTraining(400))
+    #     # train_ablation(Chunk(72))
+    #     # train_ablation(ConstantLR('1e-3'))
+    #     # train_ablation(SingleLayerSmall())
+    #     # train_ablation(SingleLayerLarge())
+    #     train_ablation(FullTraining(600))
 
     # train_ablation(ConstantLR('3e-4'))
-    # train_ablation(ConstantLR('1e-3'))
     # train_ablation(ConstantLR('2e-3'))
-
-    # train_ablation(SingleLayerSmall())
-    # train_ablation(SingleLayerLarge())
-
     # train_ablation(UnmaskedLoss())
-    # train_ablation(FullTraining(800))
     # train_ablation(ConstantLR('3e-3'))
     # train_ablation(Batch(128))
     #
     # train_ablation(Chunk(64))
     # train_ablation(SplitSin())
-
-    train_ablation(Pretrained())
     # import os
     # tf.config.set_visible_devices([], 'GPU')
-    # for model_name in ['Full(800).h5',  # '(72)SingleLayerLarge.h5',
+    # for model_name in ['Full(600).h5',  # '(72)SingleLayerLarge.h5',
     #                    # '(72)SingleLayerSmall.h5', 'ConstantLR(1e-3).h5'
     #                    ]:
-    #     model = tf.keras.models.load_model('models/ablations/72/' + model_name, custom_objects={'loss': NakdimonParams().loss})
+    #     model = tf.keras.models.load_model('models/ablations/' + model_name,
+    #                                        custom_objects={'loss': TrainingParams().loss})
     #     print(model_name, *metrics.metricwise_mean(calculate_metrics(model)).values(), sep=', ')

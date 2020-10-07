@@ -6,7 +6,7 @@ import numpy as np
 import hebrew
 
 
-basepath = Path('test_dicta/expected')
+basepath = Path('tests/validation/expected')
 
 
 def metric_cha(actual: str, expected: str, *args, **kwargs) -> float:

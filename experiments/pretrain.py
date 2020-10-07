@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import wandb
@@ -7,6 +8,7 @@ from dataset import letters_table, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_S
 import utils
 import hebrew
 from train import TrainingParams
+import metrics
 
 
 pretrain_path = f'./models/wiki'
@@ -55,16 +57,28 @@ def self_supervized_model(units):
 class Pretrained(TrainingParams):
     def build_model(self):
         inp = keras.Input(shape=(None,), batch_size=None)
-        base = keras.models.load_model(model_name,
-                                       custom_objects={'loss': self.loss, 'BaseModel': BaseModel(self.units)})
-        layer = base(inp)
-        layer = layers.Dense(self.units)(layer)
+
+        pretrained = keras.models.load_model(model_name,
+                                             custom_objects={'loss': self.loss, 'BaseModel': BaseModel(self.units)})
+        base = pretrained.layers[0]
+
+        embed = base.embed(inp)
+        layer = base.lstm1(embed)
+        layer = base.lstm2(layer)
+
+        layer = pretrained.layers[1](layer)
         outputs = [
             layers.Dense(NIQQUD_SIZE, name='N')(layer),
             layers.Dense(DAGESH_SIZE, name='D')(layer),
             layers.Dense(SIN_SIZE, name='S')(layer),
         ]
         return keras.Model(inputs=inp, outputs=outputs)
+
+
+class PretrainedModernOnly(Pretrained):
+    def epoch_params(self, data):
+        lrs = [30e-4, 30e-4, 30e-4, 8e-4, 1e-4]
+        yield ('modern', len(lrs), keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch]))
 
 
 def get_masked(raw_y, rate):
@@ -121,5 +135,24 @@ def pretrain():
     return model
 
 
+def train_ablation(params):
+    from train import train
+    model = train(params)
+    model.save(f'./models/ablations/{params.name}.h5')
+
+
 if __name__ == '__main__':
-    pretrain()
+    mode = ''
+
+    if mode == 'pretrain':
+        pretrain()
+    elif mode == 'train_ablation':
+        train_ablation(PretrainedModernOnly())
+    else:
+        import ablations
+        tf.config.set_visible_devices([], 'GPU')
+        model_name = 'PretrainedModernOnly'
+        model = tf.keras.models.load_model(f'models/ablations/{model_name}.h5',
+                                           custom_objects={'loss': TrainingParams().loss})
+        print(model_name, *metrics.metricwise_mean(ablations.calculate_metrics(model)).values(), sep=', ')
+
