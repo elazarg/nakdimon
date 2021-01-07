@@ -102,6 +102,14 @@ function update_dotted(items) {
 
 }
 
+function copyToClipboard() {
+    const text = global_items.map(item => to_text(item)).join("");
+    navigator.clipboard.writeText(text).then(function() {
+        console.log('Async: Copying to clipboard was successful!');
+    }, function(err) {
+        console.error('Async: Could not copy text: ', err);
+    });
+}
 
 function download() {
     const text = global_items.map(item => to_text(item)).join("");
