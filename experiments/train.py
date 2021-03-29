@@ -26,23 +26,24 @@ class NakdimonParams:
     def name(self):
         return type(self).__name__
 
-    maxlen = 80
     batch_size = 64
     units = 400
 
     corpus = {
-        'mix': [
+        'mix': (80, tuple([
             'hebrew_diacritized/poetry',
             'hebrew_diacritized/rabanit',
             'hebrew_diacritized/pre_modern'
-        ],
-        'modern': [
+        ])),
+        'modern': (80, tuple([
             'hebrew_diacritized/modern',
             'hebrew_diacritized/dictaTestCorpus'
-        ]
+        ]))
     }
 
     validation_rate = 0
+
+    subtraining_rate = {'mix': 1, 'modern': 1}
 
     def loss(self, y_true, y_pred):
         return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
@@ -74,6 +75,9 @@ class NakdimonParams:
         ]
         return tf.keras.Model(inputs=inp, outputs=outputs)
 
+    def initialize_weights(self, model):
+        return
+
 
 class TrainingParams(NakdimonParams):
     validation_rate = 0.1
@@ -90,14 +94,17 @@ def get_xy(d):
 
 def load_data(params: NakdimonParams):
     data = {}
-    for stage_name, stage_dataset_filenames in params.corpus.items():
+    for stage_name, (maxlen, stage_dataset_filenames) in params.corpus.items():
         np.random.seed(2)
-        data[stage_name] = dataset.load_data(dataset.read_corpora(stage_dataset_filenames),
-                                             validation_rate=params.validation_rate, maxlen=params.maxlen)
+        data[stage_name] = dataset.load_data(tuple(dataset.read_corpora(tuple(stage_dataset_filenames))),
+                                             validation_rate=params.validation_rate,
+                                             maxlen=maxlen
+                                             # ,subtraining_rate=params.subtraining_rate[stage_name]
+                                             )
     return data
 
 
-def train(params: NakdimonParams, ablation=None):
+def train(params: NakdimonParams, group, ablation=None):
 
     data = load_data(params)
 
@@ -108,20 +115,24 @@ def train(params: NakdimonParams, ablation=None):
 
     config = {
         'batch_size': params.batch_size,
-        'maxlen': params.maxlen,
         'units': params.units,
         'model': model,
+        # 'rate_modern': params.subtraining_rate['modern']
     }
 
     run = wandb.init(project="dotter",
-                     group="ablations_final",
+                     group=group,
                      name=params.name,
                      tags=[],
                      config=config)
+
+    params.initialize_weights(model)
+
     with run:
         last_epoch = 0
         for (stage, n_epochs, scheduler) in params.epoch_params(data):
             (train, validation) = data[stage]
+
             if validation:
                 with open(f'validation_files_{stage}.txt', 'w') as f:
                     for p in validation.filenames:
@@ -152,5 +163,5 @@ class Full(NakdimonParams):
 
 
 if __name__ == '__main__':
-    model = train(Full())
+    model = train(Full(), 'Full')
     model.save(f'./final_model/final.h5')

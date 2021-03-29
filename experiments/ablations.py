@@ -85,6 +85,13 @@ class ConstantLR(TrainingParams):
 
 
 class ModernOnly(TrainingParams):
+    corpus = {
+        'modern': (80, [
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/dictaTestCorpus'
+        ])
+    }
+
     def epoch_params(self, data):
         lrs = [30e-4, 30e-4, 30e-4, 8e-4, 1e-4]
         yield ('modern', len(lrs), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch]))
@@ -113,6 +120,67 @@ class Batch(TrainingParams):
         return f'Batch({self.batch_size})'
 
 
+class Subtraining(ModernOnly):
+    def __init__(self, subtraining_rate):
+        self.subtraining_rate = {'modern': subtraining_rate}
+
+    def initialize_weights(self, model):
+        model.load_weights('./checkpoints/mix')
+
+    @property
+    def name(self):
+        return f'Subtraining({self.subtraining_rate["modern"]})'
+
+
+class MultiMaxlen(ModernOnly):
+    def __init__(self, maxlens, lrs):
+        self.maxlens = maxlens
+        self.lrs = lrs
+        files = [
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/dictaTestCorpus'
+        ]
+        self.corpus = {f'modern_{maxlen}': (maxlen, files) for maxlen in maxlens}
+
+    def initialize_weights(self, model):
+        model.load_weights('./checkpoints/mix')
+
+    def epoch_params(self, data):
+        for maxlen, lr in zip(self.maxlens, self.lrs):
+            yield (f'modern_{maxlen}', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, _lr: lr))
+
+    @property
+    def name(self):
+        maxlens = ", ".join(str(x) for x in self.maxlens)
+        lrs = ", ".join(str(x) for x in self.lrs)
+        return f'MultiMaxlen({maxlens}; {lrs})'
+
+
+class Crf(TrainingParams):
+    def build_model(self):
+        from tf2crf import CRF, ModelWithCRFLoss
+        from train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        layers = tf.keras.layers
+
+        inp = tf.keras.Input(shape=(None,), batch_size=None)
+        embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
+
+        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(embed)
+        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(layer)
+        layer = layers.Dense(self.units)(layer)
+
+        layer = CRF()(layer)
+
+        outputs = [
+            layers.Dense(NIQQUD_SIZE, name='N')(layer),
+            layers.Dense(DAGESH_SIZE, name='D')(layer),
+            layers.Dense(SIN_SIZE, name='S')(layer),
+        ]
+        base_model = tf.keras.Model(inputs=inp, outputs=outputs)
+        model = ModelWithCRFLoss(base_model, sparse_target=True)
+        return model
+
+
 def calculate_metrics(model):
     import nakdimon
     for file in Path('tests/validation/expected/modern/').glob('*'):
@@ -123,16 +191,25 @@ def calculate_metrics(model):
         yield metrics.all_metrics(actual, expected)
 
 
-def train_ablation(params):
+def train_ablation(params, group):
     def ablation(model):
         return metrics.metricwise_mean(calculate_metrics(model))
-    model = train(params, ablation)
+    model = train(params, group, ablation)
     model.save(f'./models/ablations/{params.name}.h5')
 
 
 if __name__ == '__main__':
-    FullTraining(600)
+    train_ablation(Crf(), group="crf")
+    # import random
+    # for _ in range(10):
+    #     n = random.choice([3, 4, 5])
+    #     lrs = [random.choice([1e-4, 5e-4, 10e-4, 20e-4, 30e-4]) for _ in range(n)]
+    #     maxlens = [random.choice([70, 75, 80, 85, 90, 95]) for _ in range(n)]
+    #     train_ablation(MultiMaxlen(maxlens, lrs))
+    # FullTraining(600)
+    # from pretrain import Pretrained
     # for _ in range(5):
+    #     train_ablation(Pretrained())
     #     # train_ablation(ModernOnly())
     #     # train_ablation(FullTraining(400))
     #     # train_ablation(Chunk(72))

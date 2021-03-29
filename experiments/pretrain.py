@@ -146,8 +146,8 @@ if __name__ == '__main__':
 
     if mode == 'pretrain':
         pretrain()
-    elif mode == 'train_ablation':
-        train_ablation(PretrainedModernOnly())
+    # elif mode == 'train_ablation':
+    #     train_ablation(PretrainedModernOnly())
     else:
         import ablations
         tf.config.set_visible_devices([], 'GPU')

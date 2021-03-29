@@ -1,6 +1,8 @@
 from typing import Tuple, List
-
+import random
 import numpy as np
+
+from cachier import cachier
 
 import hebrew
 import utils
@@ -122,11 +124,12 @@ class Data:
         print(self.shapes())
 
 
+@cachier()
 def read_corpora(base_paths):
-    return [(filename, list(hebrew.iterate_file(filename))) for filename in utils.iterate_files(base_paths)]
+    return tuple([(filename, list(hebrew.iterate_file(filename))) for filename in utils.iterate_files(base_paths)])
 
 
-def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True) -> Tuple[Data, Data]:
+def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True, subtraining_rate=1) -> Tuple[Data, Data]:
     corpus = [(filename, Data.from_text(heb_items, maxlen)) for (filename, heb_items) in corpora]
 
     validation_data = None
@@ -147,7 +150,9 @@ def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True) -> Tup
         validation_data = Data.concatenate(validation)
         validation_data.filenames = tuple(validation_filenames)
 
-    train = Data.concatenate([c for (_, c) in corpus])
+    cs = [c for (_, c) in corpus]
+    random.shuffle(cs)
+    train = Data.concatenate(cs[:int(subtraining_rate * len(corpus))])
     if shuffle:
         train.shuffle()
     return train, validation_data

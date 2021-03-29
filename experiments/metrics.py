@@ -131,8 +131,8 @@ def all_diffs(system1, system2):
 
 def all_metrics(actual, expected):
     return {
-        'cha': metric_cha(actual, expected),
         'dec': metric_dec(actual, expected),
+        'cha': metric_cha(actual, expected),
         'wor': metric_wor(actual, expected),
         'voc': metric_wor(actual, expected, vocalize=True)
     }
@@ -200,6 +200,7 @@ def breakdown(sysname):
 def format_latex(sysname, results):
     print('{sysname} & {cha:.2%}  & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
           .replace('%', ''))
+
 
 def all_stats():
     SYSTEMS = [
