@@ -47,6 +47,11 @@ def metric_wor(actual: str, expected: str, *args, **kwargs) -> float:
     actual_hebrew, expected_hebrew = get_items(actual, expected, *args, **kwargs)
     actual_tokens = hebrew.tokenize(actual_hebrew)
     expected_tokens = hebrew.tokenize(expected_hebrew)
+    # for x, y in zip(actual_tokens, expected_tokens):
+    #     if is_hebrew(x) and x != y and '"' not in token_to_text(x):
+    #         print('מצוי', token_to_text(x))
+    #         print('רצוי', token_to_text(y))
+    #         print()
 
     return mean_equal((x, y) for x, y in zip(actual_tokens, expected_tokens)
                       if is_hebrew(x))
@@ -113,10 +118,10 @@ def all_diffs_for_files(expected_filename, system1, system2):
     assert len(expected_sentences) == len(actual_sentences1) == len(actual_sentences2)
 
     triples = [(e, a1, a2) for (e, a1, a2) in zip(expected_sentences, actual_sentences1, actual_sentences2)
-               if metric_cha(a1, e) > 0.98 and metric_cha(a2, e) < 0.95]
+               if metric_wor(a1, e) < 0.90 or metric_wor(a2, e) < 0.90]
     triples.sort(key=lambda e_a1_a2: metric_cha(e_a1_a2[2], e_a1_a2[0]))
     for (e, a1, a2) in triples[:20]:
-        print(f"{system1}: {metric_cha(a1, e):.2%}; {system2}: {metric_cha(a2, e):.2%}")
+        print(f"{system1}: {metric_wor(a1, e):.2%}; {system2}: {metric_wor(a2, e):.2%}")
         print('סבבה:', a1)
         print('מקור:', e)
         print('גרוע:', a2)
@@ -127,6 +132,20 @@ def all_diffs(system1, system2):
     for folder in basepath.iterdir():
         for file in folder.iterdir():
             all_diffs_for_files(str(file), system1, system2)
+
+
+def collect_failed_words_for_files(system):
+    for folder in basepath.iterdir():
+        for file in folder.iterdir():
+            expected_filename = str(file)
+            expected_sentences = split_to_sentences(clean_read(expected_filename))
+            actual_sentences = split_to_sentences(clean_read(expected_filename.replace('expected', system)))
+            assert len(expected_sentences) == len(actual_sentences)
+
+            actual_tokens = [token for sentence in actual_sentences for token in sentence.split()]
+            expected_tokens = [token for sentence in expected_sentences for token in sentence.split()]
+            assert len(actual_tokens) == len(expected_tokens)
+            yield from [(x, y) for x, y in zip(expected_tokens, actual_tokens) if x != y]
 
 
 def all_metrics(actual, expected):
@@ -205,10 +224,10 @@ def format_latex(sysname, results):
 def all_stats():
     SYSTEMS = [
         # "Nakdimon",
-        # "Nakdan",
+        "Nakdan",
         # "Snopi",
         # "Nakdimon0"
-        "Morfix"
+        # "Morfix"
         # "NakdimonNoDicta"
     ]
     for sysname in SYSTEMS:
@@ -282,4 +301,6 @@ if __name__ == '__main__':
     #     adapt_morfix(f'test_dicta/expected/dicta/{i}.txt')
     # all_diffs('Nakdan', 'NakdimonValidation')
     # all_diffs('NakdimonValidation', 'Nakdan')
-    all_stats()
+    from random import sample
+    for expeceted, actual in sample(list(collect_failed_words_for_files("NakdimonValidation")), 100):
+        print(expeceted, '^', actual)

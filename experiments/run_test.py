@@ -1,11 +1,12 @@
+import collections
 from pathlib import Path
 
 import utils
 
-from external_apis import SYSTEMS
+from external_apis import SYSTEMS, fetch_dicta_count_ambiguity
 import hebrew
 
-basepath = 'test_dicta/expected'
+basepath = 'tests/test/expected'
 
 
 def diacritize(sysname, filename):
@@ -30,7 +31,24 @@ def diacritize_all(sysname):
             f.write(actual)
 
 
+def count_all_ambiguity():
+    c = collections.Counter()
+    for filename in utils.iterate_files([basepath]):
+        print(filename, end=' ' * 30 + '\r', flush=True)
+
+        with open(filename, 'r', encoding='utf8') as r:
+            expected = r.read()
+
+        cleaned = hebrew.remove_niqqud(expected)
+        actual = fetch_dicta_count_ambiguity(cleaned)
+        c.update(actual)
+
+    with open('count_ambiguity.txt', 'w', encoding='utf8') as f:
+        print(c, file=f)
+
+
 if __name__ == '__main__':
     # diacritize_all('NakdimonValidation')
-    diacritize_all('Nakdan')
+    # diacritize_all('Nakdan')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))
+    count_all_ambiguity()

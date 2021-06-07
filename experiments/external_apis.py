@@ -174,6 +174,30 @@ SYSTEMS = {
 fetch_nakdimon.clear_cache()
 # fetch_dicta.clear_cache()
 
+
+def fetch_dicta_count_ambiguity(text: str):
+    url = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api'
+
+    payload = {
+        "task": "nakdan",
+        "genre": "modern",
+        "data": text,
+        # "addmorph": True,
+        "keepqq": False,
+        "nodageshdefmem": False,
+        "patachma": False,
+        "keepmetagim": True,
+    }
+    headers = {
+        'content-type': 'text/plain;charset=UTF-8'
+    }
+
+    r = requests.post(url, json=payload, headers=headers)
+    r.raise_for_status()
+    return [len(set(token['options'])) for token in r.json() if not token['sep']]
+
+
 if __name__ == '__main__':
-    text = 'ה"קפיטליסטית" של סוף המאה ה-19, ומהוות מופת לפעולה וולונטרית שאינה'
-    print(fetch_nakdimon(text))
+    text = 'בית עם גינה'
+    counts = fetch_dicta_count_ambiguity(text)
+    print(counts)
