@@ -162,6 +162,23 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
+class FullNew(NakdimonParams):
+    validation_rate = 0.1
+
+    corpus = {
+        'mix': (80, tuple([
+            'hebrew_diacritized/poetry',
+            'hebrew_diacritized/rabanit',
+            'hebrew_diacritized/pre_modern'
+        ])),
+        'modern': (80, tuple([
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/shortstoryproject',
+            'hebrew_diacritized/dictaTestCorpus'
+        ]))
+    }
+
+
 if __name__ == '__main__':
-    model = train(Full(), 'Full')
-    model.save(f'./final_model/final.h5')
+    model = train(FullNew(), 'FullNew')
+    model.save(f'./models/FullNew.h5')

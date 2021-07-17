@@ -4,3 +4,4 @@ tensorflowjs
 wandb
 flask
 beautifulsoup4
+lxml

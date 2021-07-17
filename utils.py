@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Iterable
 
 import sys
 import contextlib
@@ -7,7 +7,7 @@ import os
 import numpy as np
 
 
-def iterate_files(base_paths: List[str]) -> List[str]:
+def iterate_files(base_paths: Iterable[str]) -> List[str]:
     for name in base_paths:
         if not os.path.isdir(name):
             yield name

@@ -35,6 +35,7 @@ def output(html, out_filename):
 
 def fetch(ynet_id, out_filename=None):
     url = 'https://www.ynet.co.il/articles/0,7340,L-{},00.html'.format(ynet_id)
+    print(url)
     html = get(url)
     if html is None:
         return

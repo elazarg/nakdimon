@@ -306,9 +306,9 @@ def average_wordlen(path):
 
 
 if __name__ == '__main__':
-    print(average_wordlen('test/expected'))
+    tokens = collect_tokens(['../gender_dots/scraping/scrape_data/shortstoryproject'])
     # stuff(tokens)
-    # print(len(tokens))
+    print(len(tokens))
     # for i, t in enumerate(tokens):
     #     vv = 'פניה'
     #     if vv == remove_niqqud(str(t)):

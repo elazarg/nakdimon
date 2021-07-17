@@ -6,29 +6,29 @@ import utils
 from external_apis import SYSTEMS, fetch_dicta_count_ambiguity
 import hebrew
 
-basepath = 'tests/test/expected'
-
-
-def diacritize(sysname, filename):
-    with open(filename, 'r', encoding='utf8') as f:
-        expected = f.read()
-    cleaned = hebrew.remove_niqqud(expected)
-    return SYSTEMS[sysname](cleaned)
+basepath = '../gender_dots/scraping/scrape_data/shortstoryproject'
 
 
 def diacritize_all(sysname):
-    for filename in utils.iterate_files([basepath]):
-        # if filename.endswith(r'\nrg\6.txt') or filename.endswith(r'president\6.txt'):
-        #    continue
-        print(filename, end=' ' * 30 + '\r', flush=True)
+    diacritizer = SYSTEMS[sysname]
 
-        actual = diacritize(sysname, filename)
-
-        outfile = filename.replace('expected', sysname)
+    def diacritize_this(filename):
+        outfile = filename.replace('shortstoryproject', sysname)
+        if Path(outfile).exists():
+            return
+        print(filename)
         Path(outfile).parent.mkdir(parents=True, exist_ok=True)
-
+        with open(filename, 'r', encoding='utf8') as f:
+            expected = f.read()
+        cleaned = hebrew.remove_niqqud(expected)
+        actual = diacritizer(cleaned)
         with open(outfile, 'w', encoding='utf8') as f:
             f.write(actual)
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        for filename in utils.iterate_files([basepath]):
+            executor.submit(diacritize_this, filename)
 
 
 def count_all_ambiguity():
@@ -49,6 +49,6 @@ def count_all_ambiguity():
 
 if __name__ == '__main__':
     # diacritize_all('NakdimonValidation')
-    # diacritize_all('Nakdan')
+    diacritize_all('Dicta')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))
-    count_all_ambiguity()
+    # count_all_ambiguity()

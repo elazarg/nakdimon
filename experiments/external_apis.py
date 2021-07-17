@@ -108,7 +108,11 @@ def fetch_dicta(text: str) -> str:
 
     r = requests.post(url, json=payload, headers=headers)
     r.raise_for_status()
-    return ''.join(extract_word(k) for k in r.json())
+    result = ''.join(extract_word(k) for k in r.json())
+    if len(hebrew.remove_niqqud(result)) * 1.2 > len(result):
+        print("Failed to dot")
+        raise requests.RequestException("Undotted response")
+    return result
 
 
 @cachier()
@@ -118,7 +122,7 @@ def fetch_nakdimon(text: str) -> str:
 
     payload = {
         "text": text,
-        "model_name": 'final/final_model.h5'
+        "model_name": 'final_model/final.h5'
     }
     headers = {
     }
@@ -165,13 +169,13 @@ def fetch_nakdimon_validation(text: str) -> str:
 SYSTEMS = {
     'Snopi': fetch_snopi,  # Too slow
     'Morfix': fetch_morfix,  # terms-of-use issue
-    'Nakdan': fetch_dicta,
+    'Dicta': fetch_dicta,
     'Nakdimon': fetch_nakdimon,
     'NakdimonNoDicta': fetch_nakdimon_no_dicta,
     'NakdimonValidation': fetch_nakdimon_validation
 }
 
-fetch_nakdimon.clear_cache()
+# fetch_nakdimon.clear_cache()
 # fetch_dicta.clear_cache()
 
 
