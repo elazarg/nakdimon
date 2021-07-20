@@ -341,10 +341,10 @@ def print_longest_undotted_files(path):
 
 
 if __name__ == '__main__':
-    print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
-    # tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_predotted'])
+    # print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
+    tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_Dicta'])
     # stuff(tokens)
-    # print(len(tokens))
+    print(len(tokens))
     # for i, t in enumerate(tokens):
     #     vv = 'פניה'
     #     if vv == remove_niqqud(str(t)):
