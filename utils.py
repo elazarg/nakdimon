@@ -18,6 +18,11 @@ def iterate_files(base_paths: Iterable[str]) -> List[str]:
                 yield path
 
 
+def read_file(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
 # from: https://stackoverflow.com/a/45735618/2289509
 @contextlib.contextmanager
 def smart_open(filename: str, mode: str = 'r', *args, **kwargs):

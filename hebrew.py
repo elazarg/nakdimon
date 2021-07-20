@@ -327,10 +327,24 @@ def name_of(c):
     return "לא ידוע ({})".format(hex(ord(c)))
 
 
+def find_longest_undotted(text):
+    text = re.sub(r'[^\u0590-\u05f4#]', '', text)
+    return max(re.findall(r'[\u05d0-\u05ea]+', text), key=len)
+
+
+def print_longest_undotted_files(path):
+    undotted_list = [(find_longest_undotted(utils.read_file(filename)), filename) for filename in utils.iterate_files(path)]
+    undotted_list.sort(key=lambda x: len(x[1]))
+    for text, filename in undotted_list:
+        if len(text) > 25:
+            print(filename)
+
+
 if __name__ == '__main__':
-    tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_predotted'])
+    print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
+    # tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_predotted'])
     # stuff(tokens)
-    print(len(tokens))
+    # print(len(tokens))
     # for i, t in enumerate(tokens):
     #     vv = 'פניה'
     #     if vv == remove_niqqud(str(t)):
