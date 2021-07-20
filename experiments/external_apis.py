@@ -109,9 +109,6 @@ def fetch_dicta(text: str) -> str:
     r = requests.post(url, json=payload, headers=headers)
     r.raise_for_status()
     result = ''.join(extract_word(k) for k in r.json())
-    if len(hebrew.remove_niqqud(result)) * 1.2 > len(result):
-        print("Failed to dot")
-        raise requests.RequestException("Undotted response")
     return result
 
 
@@ -151,12 +148,12 @@ def fetch_nakdimon_no_dicta(text: str) -> str:
 
 @cachier()
 @piecewise(10000)
-def fetch_nakdimon_validation(text: str) -> str:
+def fetch_nakdimon_fullnew(text: str) -> str:
     url = 'http://127.0.0.1:5000'
 
     payload = {
         "text": text,
-        "model_name": 'models/ablations/Full(400).h5'
+        "model_name": 'models/FullNewCleaned.h5'
     }
     headers = {
     }
@@ -172,7 +169,7 @@ SYSTEMS = {
     'Dicta': fetch_dicta,
     'Nakdimon': fetch_nakdimon,
     'NakdimonNoDicta': fetch_nakdimon_no_dicta,
-    'NakdimonValidation': fetch_nakdimon_validation
+    'NakdimonFullNew': fetch_nakdimon_fullnew,
 }
 
 # fetch_nakdimon.clear_cache()
@@ -205,3 +202,5 @@ if __name__ == '__main__':
     text = 'בית עם גינה'
     counts = fetch_dicta_count_ambiguity(text)
     print(counts)
+
+fetch_dicta.clear_cache()

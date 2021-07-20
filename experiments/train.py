@@ -134,7 +134,7 @@ def train(params: NakdimonParams, group, ablation=None):
             (train, validation) = data[stage]
 
             if validation:
-                with open(f'validation_files_{stage}.txt', 'w') as f:
+                with open(f'validation_files_{stage}.txt', 'w', encoding='utf-8') as f:
                     for p in validation.filenames:
                         print(p, file=f)
 
@@ -162,23 +162,7 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
-class FullNew(NakdimonParams):
-    validation_rate = 0.1
-
-    corpus = {
-        'mix': (80, tuple([
-            'hebrew_diacritized/poetry',
-            'hebrew_diacritized/rabanit',
-            'hebrew_diacritized/pre_modern'
-        ])),
-        'modern': (80, tuple([
-            'hebrew_diacritized/modern',
-            'hebrew_diacritized/shortstoryproject',
-            'hebrew_diacritized/dictaTestCorpus'
-        ]))
-    }
-
-
 if __name__ == '__main__':
-    model = train(FullNew(), 'FullNew')
-    model.save(f'./models/FullNew.h5')
+    # model = train(FullNew(), 'FullNew')
+    # model.save(f'./models/FullNew3.h5')
+    pass

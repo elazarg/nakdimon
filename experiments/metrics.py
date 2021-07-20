@@ -223,7 +223,10 @@ def format_latex(sysname, results):
 
 def all_stats():
     SYSTEMS = [
-        # "Nakdimon",
+        "NakdimonValidation",
+        "NakdimonFullNewCleaned",
+        "NakdimonFullNew(500,1 epoch)",
+        "NakdimonFullNew(500,2 epoch)",
         "Nakdan",
         # "Snopi",
         # "Nakdimon0"
@@ -301,6 +304,8 @@ if __name__ == '__main__':
     #     adapt_morfix(f'test_dicta/expected/dicta/{i}.txt')
     # all_diffs('Nakdan', 'NakdimonValidation')
     # all_diffs('NakdimonValidation', 'Nakdan')
-    from random import sample
-    for expeceted, actual in sample(list(collect_failed_words_for_files("NakdimonValidation")), 100):
-        print(expeceted, '^', actual)
+    # from random import sample
+    # for expeceted, actual in sample(list(collect_failed_words_for_files("NakdimonValidation")), 100):
+    #     print(expeceted, '^', actual)
+    all_stats()
+    # all_diffs("NakdimonFullNew(500,2 epoch)", "Nakdan")

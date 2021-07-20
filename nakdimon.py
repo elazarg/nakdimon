@@ -9,7 +9,11 @@ import hebrew
 
 # tf.config.set_visible_devices([], 'GPU')
 
-load_cached_model = lru_cache()(tf.keras.models.load_model)
+@lru_cache()
+def load_cached_model(m):
+    model = tf.keras.models.load_model(m, custom_objects={'loss': None})
+    return model
+
 load_model = tf.keras.models.load_model
 
 

@@ -146,7 +146,9 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         normalized = normalize(letter)
         i += 1
 
-        assert letter not in ANY_NIQQUD, f'{i}, {text[i - 15:i + 15]}'
+        nbrd = text[i - 15:i + 15].split()[1:-1]
+
+        assert letter not in ANY_NIQQUD, f'{i}, {nbrd}, {[name_of(c) for word in nbrd for c in word]}'
 
         if is_hebrew_letter(normalized):
             if text[i] == DAGESH_LETTER:
@@ -305,8 +307,28 @@ def average_wordlen(path):
     return np.mean(token_lens)
 
 
+def name_of(c):
+    if 'א' <= c <= 'ת':
+        return c
+    if c == DAGESH_LETTER: return 'דגש\שורוק'
+    if c == Niqqud.KAMATZ: return 'קמץ'
+    if c == Niqqud.PATAKH: return 'פתח'
+    if c == Niqqud.TZEIRE: return 'צירה'
+    if c == Niqqud.SEGOL: return 'סגול'
+    if c == Niqqud.SHVA: return 'שוא'
+    if c == Niqqud.HOLAM: return 'חולם'
+    if c == Niqqud.KUBUTZ: return 'קובוץ'
+    if c == Niqqud.HIRIK: return 'חיריק'
+    if c == Niqqud.REDUCED_KAMATZ: return 'חטף-קמץ'
+    if c == Niqqud.REDUCED_PATAKH: return 'חטף-פתח'
+    if c == Niqqud.REDUCED_SEGOL: return 'חטף-סגול'
+    if c == SHIN_SMALIT: return 'שין-שמאלית'
+    if c == SHIN_YEMANIT: return 'שין-ימנית'
+    return "לא ידוע ({})".format(hex(ord(c)))
+
+
 if __name__ == '__main__':
-    tokens = collect_tokens(['../gender_dots/scraping/scrape_data/shortstoryproject'])
+    tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_predotted'])
     # stuff(tokens)
     print(len(tokens))
     # for i, t in enumerate(tokens):

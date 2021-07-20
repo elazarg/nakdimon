@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from train import TrainingParams, train
 import metrics
+import schedulers
 import hebrew
 
 
@@ -181,6 +182,38 @@ class Crf(TrainingParams):
         return model
 
 
+class FullNew(TrainingParams):
+    @property
+    def name(self):
+        return f'FullNew({self.units})'
+
+    def __init__(self, units=TrainingParams.units):
+        self.units = units
+
+    corpus = {
+        'mix': (80, tuple([
+            'hebrew_diacritized/poetry',
+            'hebrew_diacritized/rabanit',
+            'hebrew_diacritized/pre_modern',
+            'hebrew_diacritized/shortstoryproject_predotted'
+        ])),
+        'dicta': (80, tuple([
+            'hebrew_diacritized/shortstoryproject_Dicta',
+        ])),
+        'modern': (80, tuple([
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/dictaTestCorpus'
+        ]))
+    }
+
+    def epoch_params(self, data):
+        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        n = 2
+        yield ('dicta', n, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
+        lrs = [30e-4, 30e-4, 8e-4, 1e-4]
+        yield ('modern', len(lrs), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch-n-1]))
+
+
 def calculate_metrics(model):
     import nakdimon
     for file in Path('tests/validation/expected/modern/').glob('*'):
@@ -199,7 +232,10 @@ def train_ablation(params, group):
 
 
 if __name__ == '__main__':
-    train_ablation(Crf(), group="crf")
+    for i in range(3):
+        for units in [400]:
+            for cls in [FullNew, FullTraining]:
+                train_ablation(cls(units), group="FullNew1")
     # import random
     # for _ in range(10):
     #     n = random.choice([3, 4, 5])
