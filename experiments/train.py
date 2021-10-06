@@ -9,7 +9,11 @@ import dataset
 from dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
 import schedulers
 
+from pathlib import Path
 assert tf.config.list_physical_devices('GPU')
+
+VALIDATION_PATH = 'hebrew_diacritized/validation/modern'
+MAXLEN = 80
 
 
 def masked_metric(v, y_true):
@@ -24,21 +28,21 @@ def accuracy(y_true, y_pred):
 class NakdimonParams:
     @property
     def name(self):
-        return type(self).__name__
+        return f'{type(self).__name__}({self.units})'
 
-    batch_size = 64
+    batch_size = 128
     units = 400
 
     corpus = {
-        'mix': (80, tuple([
+        'mix': tuple([
             'hebrew_diacritized/poetry',
             'hebrew_diacritized/rabanit',
             'hebrew_diacritized/pre_modern'
-        ])),
-        'modern': (80, tuple([
+        ]),
+        'modern': tuple([
             'hebrew_diacritized/modern',
             'hebrew_diacritized/dictaTestCorpus'
-        ]))
+        ])
     }
 
     validation_rate = 0
@@ -48,8 +52,8 @@ class NakdimonParams:
     def loss(self, y_true, y_pred):
         return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
 
-    def epoch_params(self, data):
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 0e-4, data['mix'][0], self.batch_size))
+    def epoch_params(self, train_dict):
+        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 0e-4, train_dict['mix'][0], self.batch_size))
 
         lrs = [30e-4, 30e-4, 30e-4,  8e-4, 1e-4]
         yield ('modern', len(lrs), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch - 1]))
@@ -76,38 +80,52 @@ class NakdimonParams:
         return tf.keras.Model(inputs=inp, outputs=outputs)
 
     def initialize_weights(self, model):
-        return
+        return model
 
 
 class TrainingParams(NakdimonParams):
-    validation_rate = 0.1
+    validation_rate = 0
+
+    def __init__(self, units=NakdimonParams.units):
+        self.units = units
 
 
 def get_xy(d):
-    if d is None:
-        return None
-    d.shuffle()
     x = d.normalized
-    y = {'N': d.niqqud, 'D': d.dagesh, 'S': d.sin }
+    y = {'N': d.niqqud, 'D': d.dagesh, 'S': d.sin}
     return (x, y)
 
 
 def load_data(params: NakdimonParams):
-    data = {}
-    for stage_name, (maxlen, stage_dataset_filenames) in params.corpus.items():
-        np.random.seed(2)
-        data[stage_name] = dataset.load_data(tuple(dataset.read_corpora(tuple(stage_dataset_filenames))),
-                                             validation_rate=params.validation_rate,
-                                             maxlen=maxlen
-                                             # ,subtraining_rate=params.subtraining_rate[stage_name]
-                                             )
-    return data
+    train_dict = {}
+    for stage_name, stage_dataset_filenames in params.corpus.items():
+        train_dict[stage_name] = get_xy(dataset.load_data(tuple(stage_dataset_filenames), maxlen=MAXLEN).shuffle())
+    return train_dict
 
 
-def train(params: NakdimonParams, group, ablation=None):
+def load_validation_data():
+    return get_xy(dataset.load_data(tuple([VALIDATION_PATH]), maxlen=MAXLEN).shuffle())
 
-    data = load_data(params)
 
+def ablation_metrics(model):
+    import nakdimon, metrics, hebrew
+
+    def calculate_metrics(model, validation_path):
+        for file in Path(validation_path).glob('*'):
+            print(file, ' ' * 30, end='\r', flush=True)
+            with open(file, encoding='utf8') as f:
+                expected = metrics.cleanup(f.read())
+            actual = metrics.cleanup(nakdimon.predict(model, hebrew.remove_niqqud(expected), maxlen=MAXLEN))
+            yield metrics.all_metrics(actual, expected)
+
+    return metrics.metricwise_mean(calculate_metrics(model, VALIDATION_PATH))
+
+
+def train(params: NakdimonParams, group, ablation=False):
+    print("Loading data...")
+    train_dict = load_data(params)
+    validation_data = load_validation_data() if ablation else None
+    print("Creating model...")
     model = params.build_model()
     model.compile(loss=params.loss,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
@@ -117,7 +135,6 @@ def train(params: NakdimonParams, group, ablation=None):
         'batch_size': params.batch_size,
         'units': params.units,
         'model': model,
-        # 'rate_modern': params.subtraining_rate['modern']
     }
 
     run = wandb.init(project="dotter",
@@ -126,26 +143,19 @@ def train(params: NakdimonParams, group, ablation=None):
                      tags=[],
                      config=config)
 
-    params.initialize_weights(model)
+    model = params.initialize_weights(model)
 
     with run:
         last_epoch = 0
-        for (stage, n_epochs, scheduler) in params.epoch_params(data):
-            (train, validation) = data[stage]
-
-            if validation:
-                with open(f'validation_files_{stage}.txt', 'w', encoding='utf-8') as f:
-                    for p in validation.filenames:
-                        print(p, file=f)
-
-            training_data = (x, y) = get_xy(train)
-            validation_data = get_xy(validation)
+        for phase, (stage, n_epochs, scheduler) in enumerate(params.epoch_params(train_dict)):
+            training_data = (x, y) = train_dict[stage]
 
             wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
                                                        training_data=training_data,
                                                        validation_data=validation_data,
                                                        save_model=False,
-                                                       log_weights=False)
+                                                       log_weights=False,
+                                                       save_graph=False)
 
             model.fit(x, y, validation_data=validation_data,
                       initial_epoch=last_epoch,
@@ -153,16 +163,49 @@ def train(params: NakdimonParams, group, ablation=None):
                       batch_size=params.batch_size, verbose=2,
                       callbacks=[wandb_callback, scheduler])
             last_epoch += n_epochs
-        if ablation is not None:
-            wandb.log({'final': 0, **ablation(model)})
+            if ablation:
+                wandb.log({'epoch': last_epoch, **ablation_metrics(model)})
+        if ablation:
+            wandb.log({'final': 1, **ablation_metrics(model)})
     return model
+
+
+def train_ablation(params, group):
+    model = train(params, group, ablation=True)
+    model.save(f'./models/ablations/{params.name}.h5')
 
 
 class Full(NakdimonParams):
     validation_rate = 0
 
 
+class FinalWithShortStory(NakdimonParams):
+    corpus = {
+        'mix': tuple([
+            'hebrew_diacritized/poetry',
+            'hebrew_diacritized/rabanit',
+            'hebrew_diacritized/pre_modern',
+            'hebrew_diacritized/shortstoryproject_predotted'
+        ]),
+        'dicta': tuple([
+            'hebrew_diacritized/shortstoryproject_Dicta',
+        ]),
+        'modern': tuple([
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/dictaTestCorpus',
+            'hebrew_diacritized/new',
+            'hebrew_diacritized/validation'
+        ])
+    }
+
+    def epoch_params(self, data):
+        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        lrs1 = [30e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        lrs2 = [10e-4, 10e-4, 3e-4]
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
+
+
 if __name__ == '__main__':
-    # model = train(FullNew(), 'FullNew')
-    # model.save(f'./models/FullNew3.h5')
-    pass
+    model = train(FinalWithShortStory(), 'FinalWithShortStory', ablation=False)
+    model.save(f'./models/FinalWithShortStory.h5')

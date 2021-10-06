@@ -145,10 +145,9 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         niqqud = RAFE if can_niqqud(letter) else ''
         normalized = normalize(letter)
         i += 1
-
         nbrd = text[i - 15:i + 15].split()[1:-1]
 
-        assert letter not in ANY_NIQQUD, f'{i}, {nbrd}, {[name_of(c) for word in nbrd for c in word]}'
+        assert letter not in ANY_NIQQUD, f'{i}, {nbrd}, {letter}, {[name_of(c) for word in nbrd for c in word]}'
 
         if is_hebrew_letter(normalized):
             if text[i] == DAGESH_LETTER:
@@ -324,6 +323,8 @@ def name_of(c):
     if c == Niqqud.REDUCED_SEGOL: return 'חטף-סגול'
     if c == SHIN_SMALIT: return 'שין-שמאלית'
     if c == SHIN_YEMANIT: return 'שין-ימנית'
+    if c.isprintable():
+        return c
     return "לא ידוע ({})".format(hex(ord(c)))
 
 
@@ -342,7 +343,7 @@ def print_longest_undotted_files(path):
 
 if __name__ == '__main__':
     # print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
-    tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_Dicta'])
+    tokens = collect_tokens(['hebrew_diacritized/new'])
     # stuff(tokens)
     print(len(tokens))
     # for i, t in enumerate(tokens):

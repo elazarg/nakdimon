@@ -89,6 +89,15 @@ function remove_niqqud(text) {
     return text.replace(/[\u0591-\u05C7]/g, '');
 }
 
+function to_text(item) {
+    const c = item.char === '\n' ? '\r\n' : item.char;
+    return c + (item.dagesh || '') + (item.sin || '') + (item.niqqud || '');
+}
+
+function update_dotted(items) {
+    document.getElementById("undotted_text").value = items.map(to_text).join("");
+}
+
 async function load_model() {
     const bar = new Nanobar();
     console.time('load model');
@@ -97,39 +106,54 @@ async function load_model() {
     model.summary();
 
     const input_text = document.getElementById("undotted_text");
+
     const dotButton = document.getElementById("perform_dot");
+    const clipboard = document.getElementById("clipboard");
+    const clean = document.getElementById("clean");
 
     function click() {
-        // toggle state-machine
-        if (dotButton.textContent !== "נקד") {
-            input_text.removeAttribute("hidden");
-            dotButton.textContent = "נקד";
-        } else {
-            console.time('to_input');
-            const undotted_text = remove_niqqud(input_text.value);
-            const input = split_to_rows(undotted_text.replace(/./gms, normalize), 90);
-            console.log(input);
-            console.timeEnd('to_input');
+        dotButton.disabled = true;
+        input_text.classList.add('busy');
 
-            console.time('predict');
-            const prediction = model.predict(tf.tensor2d(input), {batchSize: 64});
-            console.timeEnd('predict');
+        console.time('to_input');
+        const undotted_text = remove_niqqud(input_text.value);
+        const input = split_to_rows(undotted_text.replace(/./gms, normalize), 80);
+        console.log(input);
+        console.timeEnd('to_input');
 
-            console.time('to_text');
-            const res = prediction_to_text([].concat(...input), prediction, undotted_text);
-            console.timeEnd('to_text');
+        console.time('predict');
+        const prediction = model.predict(tf.tensor2d(input), {batchSize: 64});
+        console.timeEnd('predict');
 
-            console.time('editor');
-            update_dotted(res);
-            console.timeEnd('editor');
+        console.time('to_text');
+        const res = prediction_to_text([].concat(...input), prediction, undotted_text);
+        console.timeEnd('to_text');
 
-            input_text.setAttribute("hidden", "true");
-            dotButton.textContent = "עוד";
-        }
+        console.time('editor');
+        update_dotted(res);
+        console.timeEnd('editor');
+
+        input_text.classList.remove('busy');
+        dotButton.disabled = false;
+        dotButton.text = 'לנקד';
     }
 
-    dotButton.disabled = false;
-
     dotButton.addEventListener("click", () => click());
-    click();
+    clean.addEventListener("click", () => { input_text.value = ''; });
+
+    function onchange() { 
+      if (input_text.value !== '') {
+        dotButton.disabled = false;
+        clipboard.disabled = false;
+        clean.disabled = false;
+      } else {
+        dotButton.disabled = true;
+        clipboard.disabled = true;
+        clean.disabled = true;
+      }
+    }
+    
+    input_text.onkeyup = input_text.onchange = onchange;
+
+    dotButton.textContent = 'לנקד';
 }

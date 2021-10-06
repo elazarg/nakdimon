@@ -1,11 +1,9 @@
 import collections
 from pathlib import Path
 
-import requests
-
 import utils
 
-from external_apis import SYSTEMS, fetch_dicta_count_ambiguity
+from external_apis import SYSTEMS, fetch_dicta_count_ambiguity, DottingError
 import hebrew
 
 
@@ -23,17 +21,14 @@ def diacritize_all(sysname, basepath):
             expected = f.read()
         cleaned = hebrew.remove_niqqud(expected)
         actual = diacritizer(cleaned)
-        if len(hebrew.remove_niqqud(actual)) * 1.01 > len(actual):
-            print("Failed to dot")
-            raise requests.RequestException("Undotted response")
         with open(outfile, 'w', encoding='utf8') as f:
             f.write(actual)
 
     for filename in utils.iterate_files([basepath]):
         try:
             diacritize_this(filename)
-        except requests.RequestException:
-            print("Failed")
+        except DottingError:
+            print("Failed to dot")
 
 
 def count_all_ambiguity(basepath):
@@ -55,6 +50,6 @@ def count_all_ambiguity(basepath):
 if __name__ == '__main__':
     # diacritize_all('NakdimonValidation')
     # diacritize_all('NakdimonFullNew', 'tests/validation/expected')
-    diacritize_all('Dicta', '../gender_dots/scraping/scrape_data/expected')
+    diacritize_all('NakdimonFinalWithShortStory', 'tests/test/expected')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))
     # count_all_ambiguity()

@@ -6,7 +6,7 @@ import numpy as np
 import hebrew
 
 
-basepath = Path('tests/validation/expected')
+basepath = Path('tests/test/expected')
 
 
 def metric_cha(actual: str, expected: str, *args, **kwargs) -> float:
@@ -217,17 +217,14 @@ def breakdown(sysname):
 
 
 def format_latex(sysname, results):
-    print('{sysname} & {cha:.2%}  & {dec:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
+    print('{sysname} & {dec:.2%} & {cha:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
           .replace('%', ''))
 
 
 def all_stats():
     SYSTEMS = [
-        "NakdimonValidation",
-        "NakdimonFullNewCleaned",
-        "NakdimonFullNew(500,1 epoch)",
-        "NakdimonFullNew(500,2 epoch)",
-        "Nakdan",
+        "NakdimonFinalWithShortStory",
+        # "Nakdan",
         # "Snopi",
         # "Nakdimon0"
         # "Morfix"

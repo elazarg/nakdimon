@@ -10,6 +10,10 @@ from hebrew import Niqqud
 import hebrew
 
 
+class DottingError(RuntimeError):
+    pass
+
+
 def split_string_by_length(text: str, maxlen) -> List[str]:
     return [''.join(s).strip() for s in hebrew.split_by_length(text, maxlen)]
 
@@ -76,6 +80,7 @@ def fetch_morfix(text: str) -> str:
 @cachier()
 @piecewise(10000)
 def fetch_dicta(text: str) -> str:
+    text = '\n'.join(line for line in text.split('\n') if not line.startswith('https') and not line.startswith('#')).strip()
     def extract_word(k):
         if k['options']:
             res = k['options'][0][0]
@@ -87,6 +92,9 @@ def fetch_dicta(text: str) -> str:
             res = re.sub(Niqqud.KAMATZ + 'ו' + '(?=[א-ת])', 'ו' + Niqqud.HOLAM, res)
             res = res.replace(Niqqud.REDUCED_KAMATZ + 'ו', 'ו' + Niqqud.HOLAM)
 
+            res = res.replace(hebrew.DAGESH_LETTER * 2, hebrew.DAGESH_LETTER)
+            res = res.replace('\u05be', '-')
+            res = res.replace('יְהוָֹה', 'יהוה')
             return res
         return k['word']
 
@@ -109,6 +117,8 @@ def fetch_dicta(text: str) -> str:
     r = requests.post(url, json=payload, headers=headers)
     r.raise_for_status()
     result = ''.join(extract_word(k) for k in r.json())
+    if len(hebrew.find_longest_undotted(result)) > 40:
+        raise DottingError('Failed to dot')
     return result
 
 
@@ -163,6 +173,23 @@ def fetch_nakdimon_fullnew(text: str) -> str:
     return r.text
 
 
+@cachier()
+@piecewise(10000)
+def fetch_nakdimon_FinalWithShortStory(text: str) -> str:
+    url = 'http://127.0.0.1:5000'
+
+    payload = {
+        "text": text,
+        "model_name": 'models/FinalWithShortStory.h5'
+    }
+    headers = {
+    }
+
+    r = requests.post(url, data=payload, headers=headers)
+    r.raise_for_status()
+    return r.text
+
+
 SYSTEMS = {
     'Snopi': fetch_snopi,  # Too slow
     'Morfix': fetch_morfix,  # terms-of-use issue
@@ -170,6 +197,7 @@ SYSTEMS = {
     'Nakdimon': fetch_nakdimon,
     'NakdimonNoDicta': fetch_nakdimon_no_dicta,
     'NakdimonFullNew': fetch_nakdimon_fullnew,
+    'NakdimonFinalWithShortStory': fetch_nakdimon_FinalWithShortStory,
 }
 
 # fetch_nakdimon.clear_cache()

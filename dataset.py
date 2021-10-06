@@ -40,7 +40,6 @@ DAGESH_SIZE = len(dagesh_table)
 SIN_SIZE = len(sin_table)
 
 
-
 def print_tables():
     print('const ALL_TOKENS =', letters_table.chars, end=';\n')
     print('const niqqud_array =', niqqud_table.chars, end=';\n')
@@ -100,6 +99,7 @@ class Data:
             self.niqqud,
             self.sin
         )
+        return self
 
     @staticmethod
     def from_text(heb_items, maxlen: int) -> 'Data':
@@ -124,38 +124,17 @@ class Data:
         print(self.shapes())
 
 
-@cachier()
 def read_corpora(base_paths):
     return tuple([(filename, list(hebrew.iterate_file(filename))) for filename in utils.iterate_files(base_paths)])
 
 
-def load_data(corpora, validation_rate: float, maxlen: int, shuffle=True, subtraining_rate=1) -> Tuple[Data, Data]:
+@cachier()
+def load_data(base_paths, maxlen: int) -> Data:
+    corpora = read_corpora(base_paths)
     corpus = [(filename, Data.from_text(heb_items, maxlen)) for (filename, heb_items) in corpora]
-
-    validation_data = None
-    if validation_rate > 0:
-        np.random.shuffle(corpus)
-        size = sum(len(x) for _, x in corpus)
-        validation_size = size * validation_rate
-        validation = []
-        validation_filenames: List[str] = []
-        total_size = 0
-        while total_size < validation_size:
-            if abs(total_size - validation_size) < abs(total_size + len(corpus[-1]) - validation_size):
-                break
-            (filename, c) = corpus.pop()
-            total_size += len(c)
-            validation.append(c)
-            validation_filenames.append(filename)
-        validation_data = Data.concatenate(validation)
-        validation_data.filenames = tuple(validation_filenames)
-
     cs = [c for (_, c) in corpus]
     random.shuffle(cs)
-    train = Data.concatenate(cs[:int(subtraining_rate * len(corpus))])
-    if shuffle:
-        train.shuffle()
-    return train, validation_data
+    return Data.concatenate(cs)
 
 
 if __name__ == '__main__':
@@ -166,3 +145,5 @@ if __name__ == '__main__':
     # print(res)
     print_tables()
     print(letters_table.to_ids(["שלום"]))
+
+# load_data.clear_cache()

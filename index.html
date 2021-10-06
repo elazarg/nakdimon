@@ -3,38 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
 </head>
 
 <body dir="rtl">
   <div id='content'>
-    <h1>נקדן</h1>
+    <h1>נקדימון</h1>
     <div id="textboxes">
-        <textarea id="undotted_text" required placeholder="הכנס טקסט לניקוד" autofocus></textarea>
+        <textarea id="undotted_text" required placeholder="יש להכניס טקסט לניקוד" autofocus></textarea>
         <div id="separator">
-            <button id="perform_dot" disabled>טוען</button>
+            <button id="perform_dot" class="large green button" disabled>טוען</button>
+            <button id="clipboard" class="large blue button" onclick="copyToClipboard()" disabled>העתקה ללוח</button>
+            <button id="clean" class="large red button" disabled>ניקוי</button>
         </div>
-      <div id="dotted_text_container">
-        <p id="dotted_text" class="js-copytextarea" oncontextmenu="return false">
-            <span id="itemProto" class="charItem"></span>
-        </p>
-      </div>
-      <!-- <button id="download" onclick="download()">הורד</button> -->
-      <button id="download" onclick="copyToClipboard()">העתק ללוח 📋</button>
     </div>
   </div>
+
+  <footer>
+    <p><a href=https://github.com/elazarg/nakdimon>github.com/elazarg/nakdimon</a></p>
+    <p>נוצר על ידי אלעזר גרשוני <a href="mailto:elazarg@gmail.com">elazarg@gmail.com</a></p>
+  </footer>
 </body>
 
 <script src="https://nanobar.jacoborus.codes/js/nanobar.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.4.0/dist/tf.min.js"></script> 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
-
 <script src="dotter.js"></script>
-<script src="editor.js"></script>
 <script>
-  tf.setBackend('webgl');
   load_model();
 </script>
-
-<script src="https://unpkg.com/@popperjs/core@2"></script>
-<script src="https://unpkg.com/tippy.js@6"></script>
