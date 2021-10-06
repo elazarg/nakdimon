@@ -2,21 +2,25 @@
 
 <head>
   <meta charset="UTF-8">
-  <link rel="stylesheet" type="text/css" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"> </script>
+  <link rel="stylesheet" type="text/css" href="newstyle.css">
 </head>
 
 <body dir="rtl">
   <div id='content'>
-    <h1>נקדימון</h1>
+    <h1 id="title">נקדימון</h1>
     <div id="textboxes">
-        <textarea id="undotted_text" required placeholder="יש להכניס טקסט לניקוד" autofocus></textarea>
+        <div id="parent">
+          <textarea id="undotted_text" required placeholder="יש להכניס טקסט לניקוד" autofocus></textarea>
+        </div>
         <div id="separator">
-            <button id="perform_dot" class="large green button" disabled>טוען</button>
-            <button id="clipboard" class="large blue button" onclick="copyToClipboard()" disabled>העתקה ללוח</button>
-            <button id="clean" class="large red button" disabled>ניקוי</button>
+            <button id="perform_dot" class="large blue button">טוען</button>
+            <!-- <button id="clipboard" class="large blue button" onclick="copyToClipboard()">העתקה ללוח</button> -->
+            <button id="clean" class="large blue button">ניקוי</button>
         </div>
     </div>
+  </div>
+  <div id="log">
+
   </div>
 
   <footer>
@@ -26,8 +30,12 @@
 </body>
 
 <script src="https://nanobar.jacoborus.codes/js/nanobar.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.6.0/dist/tf.min.js"></script> 
 
 <script src="dotter.js"></script>
 <script>
-  load_model();
+  tf.setBackend('webgl');
+  (async function f() { 
+    await load_model();
+  })();
 </script>

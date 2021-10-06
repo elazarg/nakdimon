@@ -95,21 +95,27 @@ function to_text(item) {
 }
 
 function update_dotted(items) {
-    document.getElementById("undotted_text").value = items.map(to_text).join("");
+    const text = items.map(to_text).join("");
+    document.getElementById("undotted_text").value = text;
 }
 
 async function load_model() {
-    const bar = new Nanobar();
+    const dotButton = document.getElementById("perform_dot");
+
+    const bar = new Nanobar({
+        target: document.getElementById('textboxes')
+    });
     console.time('load model');
-    const model = await tf.loadLayersModel('./final_model/model.json', {onProgress: (fraction) => { bar.go(100 * fraction); } });
+    const model = await tf.loadLayersModel('./final_model/model.json', {onProgress: (fraction) => { 
+            bar.go(100 * fraction);
+            dotButton.textContent = " " + Math.round(100 * fraction) + "% ";
+        }
+    });
     console.timeEnd('load model');
     model.summary();
 
     const input_text = document.getElementById("undotted_text");
 
-    const dotButton = document.getElementById("perform_dot");
-    const clipboard = document.getElementById("clipboard");
-    const clean = document.getElementById("clean");
 
     function click() {
         dotButton.disabled = true;
@@ -118,7 +124,6 @@ async function load_model() {
         console.time('to_input');
         const undotted_text = remove_niqqud(input_text.value);
         const input = split_to_rows(undotted_text.replace(/./gms, normalize), 80);
-        console.log(input);
         console.timeEnd('to_input');
 
         console.time('predict');
@@ -135,25 +140,23 @@ async function load_model() {
 
         input_text.classList.remove('busy');
         dotButton.disabled = false;
-        dotButton.text = 'לנקד';
     }
 
     dotButton.addEventListener("click", () => click());
-    clean.addEventListener("click", () => { input_text.value = ''; });
-
-    function onchange() { 
-      if (input_text.value !== '') {
-        dotButton.disabled = false;
-        clipboard.disabled = false;
-        clean.disabled = false;
-      } else {
-        dotButton.disabled = true;
-        clipboard.disabled = true;
-        clean.disabled = true;
-      }
-    }
-    
-    input_text.onkeyup = input_text.onchange = onchange;
+    document.getElementById("clean").addEventListener("click", () => { input_text.value = ''; });
 
     dotButton.textContent = 'לנקד';
+}
+
+function copyToClipboard() {
+    const text = document.getElementById("undotted_text").value;
+    
+    // only supported on HTTPS
+    navigator.clipboard.writeText(text).then(function() {
+        console.log('Async: Copying to clipboard was successful!');
+        document.getElementById("log").innerText = "Successful";
+    }, function(err) {
+        document.getElementById("log").innerText = "Failed to copy";
+        console.error('Async: Could not copy text: ', err);
+    });
 }

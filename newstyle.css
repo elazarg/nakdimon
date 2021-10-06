@@ -10,7 +10,7 @@ html, body {
 h1 {
     text-align: center;
     color: #0b5394ff;
-    font-size: 50px;
+    font-size: 60px;
     margin-top: 0;
     margin-bottom: 0;
 }
@@ -20,7 +20,6 @@ h1 {
     width: 100%;
     height: 100%;
 }
-
 
 footer {
     text-align: center;
@@ -201,7 +200,9 @@ footer {
     /* user-select: none; */
     overflow-y: scroll;
 }
-
+#log {
+    text-align: center;
+}
 textarea, #dotted_text_container {
     font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
     margin-left: auto;
@@ -211,8 +212,8 @@ textarea, #dotted_text_container {
     font-size: 30px;
     min-height: 30vh;
     width: 90%;
-    border: 3px solid #cccccc;
-    background-color: #e0ffefff;
+    border: 1px solid rgb(234, 253, 251);
+    background-color: rgb(234, 253, 251);
     padding-left: 10px;
     padding-right: 10px;
     background-position: bottom right;
@@ -238,4 +239,8 @@ textarea.busy {
 
 .empty {
     opacity: 0;
+}
+
+.bar {
+    background-color: #0b5394ff;
 }
