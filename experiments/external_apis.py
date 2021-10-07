@@ -122,7 +122,6 @@ def fetch_dicta(text: str) -> str:
     return result
 
 
-@cachier()
 @piecewise(10000)
 def fetch_nakdimon(text: str) -> str:
     url = 'http://127.0.0.1:5000'
@@ -139,7 +138,6 @@ def fetch_nakdimon(text: str) -> str:
     return r.text
 
 
-@cachier()
 @piecewise(10000)
 def fetch_nakdimon_no_dicta(text: str) -> str:
     url = 'http://127.0.0.1:5000'
@@ -156,7 +154,6 @@ def fetch_nakdimon_no_dicta(text: str) -> str:
     return r.text
 
 
-@cachier()
 @piecewise(10000)
 def fetch_nakdimon_fullnew(text: str) -> str:
     url = 'http://127.0.0.1:5000'
@@ -173,7 +170,6 @@ def fetch_nakdimon_fullnew(text: str) -> str:
     return r.text
 
 
-@cachier()
 @piecewise(10000)
 def fetch_nakdimon_FinalWithShortStory(text: str) -> str:
     url = 'http://127.0.0.1:5000'

@@ -346,6 +346,7 @@ if __name__ == '__main__':
     tokens = collect_tokens(['hebrew_diacritized/new'])
     # stuff(tokens)
     print(len(tokens))
+    # 
     # for i, t in enumerate(tokens):
     #     vv = 'פניה'
     #     if vv == remove_niqqud(str(t)):

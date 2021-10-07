@@ -207,5 +207,5 @@ class FinalWithShortStory(NakdimonParams):
 
 
 if __name__ == '__main__':
-    model = train(FinalWithShortStory(), 'FinalWithShortStory', ablation=False)
+    model = train(FinalWithShortStory(), 'FinalWithShortStory:forgotten', ablation=False)
     model.save(f'./models/FinalWithShortStory.h5')

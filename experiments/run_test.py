@@ -48,8 +48,6 @@ def count_all_ambiguity(basepath):
 
 
 if __name__ == '__main__':
-    # diacritize_all('NakdimonValidation')
-    # diacritize_all('NakdimonFullNew', 'tests/validation/expected')
     diacritize_all('NakdimonFinalWithShortStory', 'tests/test/expected')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))
     # count_all_ambiguity()

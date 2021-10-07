@@ -177,8 +177,18 @@ class FullUpdated(TrainingParams):
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
 
+class TasteModernFirst(FullUpdated):
+    def epoch_params(self, data):
+        yield ('modern', 1,  tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 3e-3))
+        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        lrs1 = [30e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1-1]))
+        lrs2 = [10e-4, 10e-4, 3e-4]
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1-1]))
+
+
 if __name__ == '__main__':
     units = 400
-    for cls in [FullUpdated]:
+    for cls in [TasteModernFirst]:
         for i in range(5):
-            train_ablation(cls(units), group=f"{cls.__name__}:poster")
+            train_ablation(cls(units), group=f"{cls.__name__}:after-poster")
