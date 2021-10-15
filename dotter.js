@@ -143,7 +143,10 @@ async function load_model() {
     }
 
     dotButton.addEventListener("click", () => click());
-    document.getElementById("clean").addEventListener("click", () => { input_text.value = ''; });
+    document.getElementById("clean").addEventListener("click", function(){ 
+        input_text.value = ''; 
+        input_text.focus();
+    });
 
     dotButton.textContent = 'לנקד';
 }
@@ -154,9 +157,8 @@ function copyToClipboard() {
     // only supported on HTTPS
     navigator.clipboard.writeText(text).then(function() {
         console.log('Async: Copying to clipboard was successful!');
-        document.getElementById("log").innerText = "Successful";
     }, function(err) {
-        document.getElementById("log").innerText = "Failed to copy";
         console.error('Async: Could not copy text: ', err);
     });
+    document.getElementById("undotted_text").focus();
 }
