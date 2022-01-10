@@ -7,12 +7,12 @@ from external_apis import SYSTEMS, fetch_dicta_count_ambiguity, DottingError
 import hebrew
 
 
-def diacritize_all(sysname, basepath):
-    diacritizer = SYSTEMS[sysname]
+def diacritize_all(system, basepath):
+    diacritizer = SYSTEMS[system]
 
     def diacritize_this(filename):
         infile = Path(filename)
-        outfile = Path(filename.replace('expected', sysname))
+        outfile = Path(filename.replace('expected', system))
         if outfile.exists():
             return
         print(outfile)
@@ -48,6 +48,8 @@ def count_all_ambiguity(basepath):
 
 
 if __name__ == '__main__':
-    diacritize_all('NakdimonFinalWithShortStory', 'tests/test/expected')
+    diacritize_all('Dicta', 'tests/dicta/expected')
+    # diacritize_all('Snopi', 'tests/test/expected')
+    # diacritize_all('Dicta', '../shortstoryproject')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))
     # count_all_ambiguity()

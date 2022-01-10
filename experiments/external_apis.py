@@ -27,17 +27,32 @@ def piecewise(maxlen):
     return inner
 
 
+def fix_snopi(dotted_text: str, undotted_text: str) -> str:
+    items = list(hebrew.iterate_dotted_text(dotted_text))
+    for i in range(len(undotted_text)):
+        if len(items) == i:
+            items.insert(i, hebrew.HebrewItem(undotted_text[i], '', '', '', ''))
+        elif undotted_text[i] != ' ' and items[i].letter == ' ':
+            del items[i]
+        elif undotted_text[i] != items[i].letter:
+            items.insert(i, hebrew.HebrewItem(undotted_text[i], '', '', '', ''))
+    return hebrew.items_to_text(items)
+
 @cachier()
 @piecewise(75)  # estimated maximum for reasonable time
-def fetch_snopi(text: str) -> str:
+def fetch_snopi(undotted_text: str) -> str:
     # Add bogus continuation in case there's only a single word
     # so Snopi will not decide to answer with single-word-analysis
-    text = text + ' 1'
+    print(repr(undotted_text))
+    dummy = False
+    if ' ' not in undotted_text:
+        dummy = True
+        undotted_text = undotted_text + ' 1'
 
     url = 'http://www.nakdan.com/GetResult.aspx'
 
     payload = {
-        "txt": text,
+        "txt": undotted_text,
         "ktivmale": 'true',
     }
     headers = {
@@ -46,18 +61,17 @@ def fetch_snopi(text: str) -> str:
 
     r = requests.post(url, data=payload, headers=headers)
     r.raise_for_status()
-    res = list(r.text.split('Result')[1][1:-2])
-    items = list(hebrew.iterate_dotted_text(res))
 
-    for i in range(len(text)):
-        if text[i] != ' ' and items[i].letter == ' ':
-            del items[i]
-        elif text[i] != items[i].letter:
-            items.insert(i, hebrew.HebrewItem(text[i], '', '', '', ''))
-    res = hebrew.items_to_text(items)
-    assert hebrew.remove_niqqud(res) == text, f'{repr(hebrew.remove_niqqud(res))}\n!=\n{repr(text)}'
-
-    return res[:-2]
+    dotted_text = r.text.strip().split('Result')[1][1:-2]
+    print(repr(dotted_text))
+    if hebrew.remove_niqqud(dotted_text) != undotted_text:
+        print('Fixing...')
+        dotted_text = fix_snopi(dotted_text, undotted_text)
+        print(repr(dotted_text))
+    assert hebrew.remove_niqqud(dotted_text) == undotted_text, f'{repr(dotted_text)}\n!=\n{repr(undotted_text)}'
+    if dummy:
+        dotted_text = dotted_text[:-2]
+    return dotted_text
 
 
 @cachier()
@@ -196,9 +210,6 @@ SYSTEMS = {
     'NakdimonFinalWithShortStory': fetch_nakdimon_FinalWithShortStory,
 }
 
-# fetch_nakdimon.clear_cache()
-# fetch_dicta.clear_cache()
-
 
 def fetch_dicta_count_ambiguity(text: str):
     url = 'https://nakdan-2-0.loadbalancer.dicta.org.il/api'
@@ -221,10 +232,14 @@ def fetch_dicta_count_ambiguity(text: str):
     r.raise_for_status()
     return [len(set(token['options'])) for token in r.json() if not token['sep']]
 
+# fetch_snopi.clear_cache()
+# fetch_nakdimon_fullnew.clear_cache()
+fetch_dicta.clear_cache()
 
 if __name__ == '__main__':
-    text = 'בית עם גינה'
-    counts = fetch_dicta_count_ambiguity(text)
-    print(counts)
-
-fetch_dicta.clear_cache()
+    undotted_text = 'לנשיא- לא המתנת.\nתחילה יצאת לבקר את רבקה גובר ז"ל, "אם הבנים", ששכלה את'
+    dotted_text   = 'לַנָּשִׂיא-לֹא הִמְתַּנְתָּ.\nתְּחִילָּה יָצָאתָ לְבַקֵּר אֶת רִבְקָה גּוֹבֵר זַ"ל, "אֵם הַבָּנִים", שֶׁשִּׂכְלָהּ אֵת'
+    print(fix_snopi(dotted_text, undotted_text))
+    undotted_text = "והפוליטית במדינת ישראל סיכמת בצניעות רבה.\n'אני מקווה' כך אמרת, 'שבתפקידיי"
+    dotted_text   = "וְהַפּוֹלִיטִית בַּמְּדִינַת יִשְׂרָאֵל סִיכַּמְתָּ בִּצְנִיעוּת רַבָּה.\n'אֲנִי מְקַוֶּוה' כָּךְ אָמַרְתָּ, 'שֶׁבְּתַפְקִידַי"
+    print(fix_snopi(dotted_text, undotted_text))

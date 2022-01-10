@@ -1,28 +1,103 @@
-from typing import Tuple, List
+import typing
 from pathlib import Path
-
+from dataclasses import dataclass
 import numpy as np
 
 import hebrew
 
 
+@dataclass(frozen=True)
+class Document:
+    name: str
+    system: str
+    text: str
+
+    def sentences(self):
+        return [sent + '.' for sent in self.text.split('. ') if len(hebrew.remove_niqqud(sent)) > 15]
+
+    def hebrew_items(self) -> list[hebrew.HebrewItem]:
+        return list(hebrew.iterate_dotted_text(self.text))
+
+    def tokens(self) -> list[hebrew.Token]:
+        return hebrew.tokenize(self.hebrew_items())
+
+    def vocalized_tokens(self) -> list[hebrew.Token]:
+        return [x.vocalize() for x in self.tokens()]
+
+
+@dataclass(frozen=True)
+class DocumentPack:
+    name: str
+    docs: dict[str, Document]
+
+    def __getitem__(self, item):
+        return self.docs[item]
+
+    @property
+    def expected(self):
+        return self.docs['expected']
+
+    @property
+    def actual(self):
+        assert len(self.docs) == 2
+        assert 'expected' in self.docs
+        return self.docs[(set(self.docs.keys()) - {'expected'}).pop()]
+
+
+def read_document(system: str, path: Path) -> Document:
+    return Document(path.name, system, ' '.join(path.read_text(encoding='utf8').strip().split()))
+
+
+def read_document_pack(path_to_expected: Path, *systems: str) -> DocumentPack:
+    return DocumentPack(path_to_expected.name,
+                        {system: read_document(system, system_path_from_expected(path_to_expected, system))
+                         for system in systems})
+
+
+def iter_documents(*systems) -> typing.Iterator[DocumentPack]:
+    for folder in basepath.iterdir():
+        for path_to_expected in folder.iterdir():
+            yield read_document_pack(path_to_expected, *systems)
+
+
+def iter_documents_by_folder(*systems) -> typing.Iterator[list[DocumentPack]]:
+    for folder in basepath.iterdir():
+        yield [read_document_pack(path_to_expected, *systems) for path_to_expected in folder.iterdir()]
+
+
 basepath = Path('tests/test/expected')
 
 
-def metric_cha(actual: str, expected: str, *args, **kwargs) -> float:
+def system_path_from_expected(path: Path, system: str) -> Path:
+    return Path(str(path).replace('expected', system))
+
+
+def collect_failed_tokens(*systems, context):
+    for doc_pack in iter_documents('expected', *systems):
+        tokens_of = {system: doc_pack[system].tokens() for system in systems}
+        for i in range(len(tokens_of['expected'])):
+            res = {system: str(tokens_of[system][i]) for system in systems}
+            if len(set(res.values())) > 1:
+                pre = ' '.join(token_to_text(x) for x in tokens_of['expected'][i-context:i])
+                post = ' '.join(token_to_text(x) for x in tokens_of['expected'][i+1:i+context+1])
+                res = {system: token_to_text(tokens_of[system][i]) for system in systems}
+                yield (pre, res, post)
+
+
+def metric_cha(doc_pack: DocumentPack) -> float:
     """
     Calculate character-level agreement between actual and expected.
     """
-    actual_hebrew, expected_hebrew = get_items(actual, expected, *args, **kwargs)
-    return mean_equal((x, y) for x, y in zip(actual_hebrew, expected_hebrew)
+    return mean_equal((x, y) for x, y in zip(doc_pack.actual.hebrew_items(), doc_pack.expected.hebrew_items())
                       if hebrew.can_any(x.letter))
 
 
-def metric_dec(actual: str, expected: str, *args, **kwargs) -> float:
+def metric_dec(doc_pack: DocumentPack) -> float:
     """
     Calculate nontrivial-decision agreement between actual and expected.
     """
-    actual_hebrew, expected_hebrew = get_items(actual, expected, *args, **kwargs)
+    actual_hebrew = doc_pack.actual.hebrew_items()
+    expected_hebrew = doc_pack.expected.hebrew_items()
 
     return mean_equal(
        ((x.niqqud, y.niqqud) for x, y in zip(actual_hebrew, expected_hebrew)
@@ -36,41 +111,30 @@ def metric_dec(actual: str, expected: str, *args, **kwargs) -> float:
     )
 
 
-def is_hebrew(token):
+def is_hebrew(token: hebrew.Token) -> bool:
     return len([c for c in token.items if c.letter in hebrew.HEBREW_LETTERS]) > 1
 
 
-def metric_wor(actual: str, expected: str, *args, **kwargs) -> float:
+def metric_wor(doc_pack: DocumentPack) -> float:
     """
-    Calculate token-level agreement between actual and expected, for tokens containing at least 2 Hebrew letters.
+    Calculate token-level agreement between actual and expected,
+    for tokens containing at least 2 Hebrew letters.
     """
-    actual_hebrew, expected_hebrew = get_items(actual, expected, *args, **kwargs)
-    actual_tokens = hebrew.tokenize(actual_hebrew)
-    expected_tokens = hebrew.tokenize(expected_hebrew)
-    # for x, y in zip(actual_tokens, expected_tokens):
-    #     if is_hebrew(x) and x != y and '"' not in token_to_text(x):
-    #         print('מצוי', token_to_text(x))
-    #         print('רצוי', token_to_text(y))
-    #         print()
+    return mean_equal((x, y) for x, y in zip(doc_pack.actual.tokens(), doc_pack.expected.tokens())
+                      if is_hebrew(x))
 
-    return mean_equal((x, y) for x, y in zip(actual_tokens, expected_tokens)
+
+def metric_voc(doc_pack: DocumentPack) -> float:
+    """
+    Calculate token-level agreement over vocalization, between actual and expected,
+    for tokens containing at least 2 Hebrew letters.
+    """
+    return mean_equal((x, y) for x, y in zip(doc_pack.actual.vocalized_tokens(), doc_pack.expected.vocalized_tokens())
                       if is_hebrew(x))
 
 
 def token_to_text(token: hebrew.Token) -> str:
     return str(token).replace(hebrew.RAFE, '')
-
-
-def print_different_words(actual: str, expected: str, *args, **kwargs):
-    actual_hebrew, expected_hebrew = get_items(actual, expected, *args, **kwargs)
-    actual_tokens = hebrew.tokenize(actual_hebrew)
-    expected_tokens = hebrew.tokenize(expected_hebrew)
-
-    diff = [(token_to_text(x), token_to_text(y)) for x, y in zip(actual_tokens, expected_tokens)
-            if is_hebrew(x) and x != y]
-
-    for x, y in diff:
-        print(x, y)
 
 
 def mean_equal(*pair_iterables):
@@ -83,41 +147,10 @@ def mean_equal(*pair_iterables):
     return acc / total
 
 
-def get_diff(actual, expected):
-    for i, (a, e) in enumerate(zip(actual, expected)):
-        if a != e:
-            return f'\n{actual[i-15:i+15]}\n!=\n{expected[i-15:i+15]}'
-    return ''
-
-
-def get_items(actual: str, expected: str, vocalize=False) -> Tuple[List[hebrew.HebrewItem], List[hebrew.HebrewItem]]:
-    expected_hebrew = list(hebrew.iterate_dotted_text(expected))
-    actual_hebrew = list(hebrew.iterate_dotted_text(actual))
-    if vocalize:
-        expected_hebrew = [x.vocalize() for x in expected_hebrew]
-        actual_hebrew = [x.vocalize() for x in actual_hebrew]
-    diff = get_diff(repr(''.join(c.letter for c in actual_hebrew)),
-                    repr(''.join(c.letter for c in expected_hebrew)))
-    assert not diff, diff
-    return actual_hebrew, expected_hebrew
-
-
-def split_to_sentences(text):
-    return [sent + '.' for sent in text.split('. ') if len(hebrew.remove_niqqud(sent)) > 15]
-
-
-def clean_read(filename):
-    with open(filename, encoding='utf8') as f:
-        return cleanup(f.read())
-
-
-def all_diffs_for_files(expected_filename, system1, system2):
-    expected_sentences = split_to_sentences(clean_read(expected_filename))
-    actual_sentences1 = split_to_sentences(clean_read(expected_filename.replace('expected', system1)))
-    actual_sentences2 = split_to_sentences(clean_read(expected_filename.replace('expected', system2)))
-    assert len(expected_sentences) == len(actual_sentences1) == len(actual_sentences2)
-
-    triples = [(e, a1, a2) for (e, a1, a2) in zip(expected_sentences, actual_sentences1, actual_sentences2)
+def all_diffs_for_files(doc_pack: DocumentPack, system1: str, system2: str) -> None:
+    triples = [(e, a1, a2) for (e, a1, a2) in zip(doc_pack.expected.sentences(),
+                                                  doc_pack[system1].sentences(),
+                                                  doc_pack[system2].sentences())
                if metric_wor(a1, e) < 0.90 or metric_wor(a2, e) < 0.90]
     triples.sort(key=lambda e_a1_a2: metric_cha(e_a1_a2[2], e_a1_a2[0]))
     for (e, a1, a2) in triples[:20]:
@@ -128,49 +161,13 @@ def all_diffs_for_files(expected_filename, system1, system2):
         print()
 
 
-def all_diffs(system1, system2):
-    for folder in basepath.iterdir():
-        for file in folder.iterdir():
-            all_diffs_for_files(str(file), system1, system2)
-
-
-def collect_failed_words_for_files(system):
-    for folder in basepath.iterdir():
-        for file in folder.iterdir():
-            expected_filename = str(file)
-            expected_sentences = split_to_sentences(clean_read(expected_filename))
-            actual_sentences = split_to_sentences(clean_read(expected_filename.replace('expected', system)))
-            assert len(expected_sentences) == len(actual_sentences)
-
-            actual_tokens = [token for sentence in actual_sentences for token in sentence.split()]
-            expected_tokens = [token for sentence in expected_sentences for token in sentence.split()]
-            assert len(actual_tokens) == len(expected_tokens)
-            yield from [(x, y) for x, y in zip(expected_tokens, actual_tokens) if x != y]
-
-
-def all_metrics(actual, expected):
+def all_metrics(doc_pack: DocumentPack):
     return {
-        'dec': metric_dec(actual, expected),
-        'cha': metric_cha(actual, expected),
-        'wor': metric_wor(actual, expected),
-        'voc': metric_wor(actual, expected, vocalize=True)
+        'dec': metric_dec(doc_pack),
+        'cha': metric_cha(doc_pack),
+        'wor': metric_wor(doc_pack),
+        'voc': metric_voc(doc_pack)
     }
-
-
-def cleanup(text):
-    return ' '.join(text.strip().split())
-
-
-def all_metrics_for_files(actual_filename, expected_filename):
-    with open(expected_filename, encoding='utf8') as f:
-        expected = cleanup(f.read())
-
-    with open(actual_filename, encoding='utf8') as f:
-        actual = cleanup(f.read())
-    try:
-        return all_metrics(actual, expected)
-    except AssertionError as ex:
-        raise RuntimeError(actual_filename) from ex
 
 
 def metricwise_mean(iterable):
@@ -182,70 +179,26 @@ def metricwise_mean(iterable):
     }
 
 
-def macro_average(sysname):
+def macro_average(system):
     return metricwise_mean(
-        metricwise_mean(all_metrics_for_files(actual_path(file, sysname), file)
-                        for file in folder.iterdir())
-        for folder in basepath.iterdir()
+        metricwise_mean(all_metrics(doc_pack) for doc_pack in folder_packs)
+        for folder_packs in iter_documents_by_folder('expected', system)
     )
 
 
-def micro_average(sysname):
-    return metricwise_mean(
-        all_metrics_for_files(actual_path(file, sysname), file)
-        for folder in basepath.iterdir()
-        for file in folder.iterdir()
-    )
+def micro_average(system):
+    return metricwise_mean(all_metrics(doc_pack) for doc_pack in iter_documents('expected', system))
 
 
-def expected_path(file, sysname):
-    return str(file).replace("\\" + sysname + "\\", "\\expected\\")
-
-
-def actual_path(file, sysname):
-    return str(file).replace("\\expected\\", "\\" + sysname + "\\")
-
-
-# TODO: concatenate and average
-
-def breakdown(sysname):
-    return {
-        folder.name: metricwise_mean(all_metrics_for_files(actual_path(file, sysname), file)
-                                     for file in folder.iterdir())
-        for folder in basepath.iterdir()
-    }
-
-
-def format_latex(sysname, results):
-    print('{sysname} & {dec:.2%} & {cha:.2%} & {wor:.2%} & {voc:.2%} \\\\'.format(sysname=sysname, **results)
+def format_latex(system, results):
+    print(r'{system} & {dec:.2%} & {cha:.2%} & {wor:.2%} & {voc:.2%} \\'.format(system=system, **results)
           .replace('%', ''))
 
 
-def all_stats():
-    SYSTEMS = [
-        "NakdimonFinalWithShortStory",
-        # "Nakdan",
-        # "Snopi",
-        # "Nakdimon0"
-        # "Morfix"
-        # "NakdimonNoDicta"
-    ]
-    for sysname in SYSTEMS:
-        results = macro_average(sysname)
-        format_latex(sysname, results)
-
-    print()
-
-    for sysname in SYSTEMS:
-        results = micro_average(sysname)
-        format_latex(sysname, results)
-
-    print()
-
-    for sysname in SYSTEMS:
-        all_results = breakdown(sysname)
-        for source, results in all_results.items():
-            print(source, ",", ", ".join(str(x) for x in results.values()))
+def all_stats(*systems):
+    for system in systems:
+        results = macro_average(system)
+        format_latex(system, results)
 
 
 def adapt_morfix(expected_filename):
@@ -297,12 +250,8 @@ def adapt_morfix(expected_filename):
 
 
 if __name__ == '__main__':
-    # for i in range(1, 23):
-    #     adapt_morfix(f'test_dicta/expected/dicta/{i}.txt')
-    # all_diffs('Nakdan', 'NakdimonValidation')
-    # all_diffs('NakdimonValidation', 'Nakdan')
-    # from random import sample
-    # for expeceted, actual in sample(list(collect_failed_words_for_files("NakdimonValidation")), 100):
-    #     print(expeceted, '^', actual)
-    all_stats()
-    # all_diffs("NakdimonFullNew(500,2 epoch)", "Nakdan")
+    for pre, ngrams, post in collect_failed_tokens('expected', 'Nakdimon', 'Morfix', 'Dicta', context=3):
+        res = "/".join(ngrams.values())
+        print(f'{pre} [{res}] {post}')
+        print()
+    # all_stats('Dicta')

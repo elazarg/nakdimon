@@ -1,5 +1,6 @@
 import itertools
 from collections import defaultdict, Counter
+from dataclasses import dataclass
 from typing import NamedTuple, Iterator, Iterable, List, Tuple
 from functools import lru_cache
 import re
@@ -202,15 +203,12 @@ def split_by_length(characters: Iterable, maxlen: int):
         yield out
 
 
+@dataclass(frozen=True)
 class Token:
-    def __init__(self, items: List[HebrewItem]):
-        self.items = items
+    items: tuple[HebrewItem]
 
     def __str__(self):
         return ''.join(str(c) for c in self.items)
-
-    def __repr__(self):
-        return 'Token(' + repr(self.items) + ')'
 
     def __lt__(self, other: 'Token'):
         return (self.to_undotted(), str(self)) < (other.to_undotted(), str(other))
@@ -220,7 +218,7 @@ class Token:
         end = len(self.items) - 1
         while True:
             if start >= len(self.items):
-                return Token([])
+                return Token(())
             if self.items[start].letter in HEBREW_LETTERS + ANY_NIQQUD:
                 break
             start += 1
@@ -244,19 +242,22 @@ class Token:
     def is_definite(self):
         return len(self.items) > 2 and self.items[0].niqqud == 'הַ'[-1] and self.items[0].letter in 'כבלה'
 
+    def vocalize(self) -> 'Token':
+        return Token(tuple([c.vocalize() for c in self.items]))
+
 
 def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem]) -> Iterator[HebrewItem]:
     current = []
     for c in char_iterator:
         if c.letter.isspace() or c.letter == '-':
             if current:
-                tokens_list.append(Token(current).strip_nonhebrew())
+                tokens_list.append(Token(tuple(current)).strip_nonhebrew())
             current = []
         else:
             current.append(c)
         yield c
     if current:
-        tokens_list.append(Token(current).strip_nonhebrew())
+        tokens_list.append(Token(tuple(current)).strip_nonhebrew())
 
 
 def tokenize(iterator: Iterator[HebrewItem]) -> List[Token]:
@@ -343,7 +344,7 @@ def print_longest_undotted_files(path):
 
 if __name__ == '__main__':
     # print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
-    tokens = collect_tokens(['hebrew_diacritized/new'])
+    tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_Dicta'])
     # stuff(tokens)
     print(len(tokens))
     # 
