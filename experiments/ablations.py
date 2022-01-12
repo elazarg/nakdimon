@@ -112,14 +112,33 @@ class Batch(TrainingParams):
         return f'Batch({self.batch_size})'
 
 
-class FullWithDicta(TrainingParams):
-
+class FullNoMix(TrainingParams):
     corpus = {
-        'mix': tuple([
-            'hebrew_diacritized/poetry',
+        'dicta': tuple([
+            'hebrew_diacritized/shortstoryproject_predotted',
+            'hebrew_diacritized/shortstoryproject_Dicta',
+        ]),
+        'modern': tuple([
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/dictaTestCorpus'
+        ])
+    }
+
+    def epoch_params(self, data):
+        lrs1 = [30e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        lrs2 = [10e-4, 10e-4, 3e-4]
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
+
+
+class FullOrdered(TrainingParams):
+    corpus = {
+        'rabanit': tuple([
             'hebrew_diacritized/rabanit',
+        ]),
+        'pre_modern': tuple([
             'hebrew_diacritized/pre_modern',
-            'hebrew_diacritized/shortstoryproject_predotted'
+            'hebrew_diacritized/shortstoryproject_predotted',
         ]),
         'dicta': tuple([
             'hebrew_diacritized/shortstoryproject_Dicta',
@@ -131,16 +150,15 @@ class FullWithDicta(TrainingParams):
     }
 
     def epoch_params(self, data):
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
-        lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
-        lrs2 = [10e-4, 10e-4, 3e-4]
-        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
+        yield ('rabanit', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
+        yield ('pre_modern', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
+        yield ('dicta', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
+        yield ('modern', 3, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
 
 
-class FullNewNoMix(TrainingParams):
+class NoPredotted(TrainingParams):
     corpus = {
-        'mix': tuple([
+        'dicta': tuple([
             'hebrew_diacritized/shortstoryproject_predotted',
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
@@ -149,6 +167,12 @@ class FullNewNoMix(TrainingParams):
             'hebrew_diacritized/dictaTestCorpus'
         ])
     }
+
+    def epoch_params(self, data):
+        lrs1 = [30e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        lrs2 = [10e-4, 10e-4, 3e-4]
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
 
 class FullUpdated(TrainingParams):
@@ -189,6 +213,7 @@ class TasteModernFirst(FullUpdated):
 
 if __name__ == '__main__':
     units = 400
-    for cls in [TasteModernFirst]:
-        for i in range(5):
-            train_ablation(cls(units), group=f"{cls.__name__}:after-poster")
+    for cls in [FullOrdered]:
+        for i in range(3):
+            train_ablation(cls(units), group=f"{cls.__name__}2:2022")
+

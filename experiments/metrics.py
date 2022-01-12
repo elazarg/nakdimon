@@ -27,6 +27,7 @@ class Document:
 
 @dataclass(frozen=True)
 class DocumentPack:
+    source: str
     name: str
     docs: dict[str, Document]
 
@@ -49,7 +50,7 @@ def read_document(system: str, path: Path) -> Document:
 
 
 def read_document_pack(path_to_expected: Path, *systems: str) -> DocumentPack:
-    return DocumentPack(path_to_expected.name,
+    return DocumentPack(path_to_expected.parent.name, path_to_expected.name,
                         {system: read_document(system, system_path_from_expected(path_to_expected, system))
                          for system in systems})
 
@@ -72,16 +73,16 @@ def system_path_from_expected(path: Path, system: str) -> Path:
     return Path(str(path).replace('expected', system))
 
 
-def collect_failed_tokens(*systems, context):
-    for doc_pack in iter_documents('expected', *systems):
-        tokens_of = {system: doc_pack[system].tokens() for system in systems}
-        for i in range(len(tokens_of['expected'])):
-            res = {system: str(tokens_of[system][i]) for system in systems}
-            if len(set(res.values())) > 1:
-                pre = ' '.join(token_to_text(x) for x in tokens_of['expected'][i-context:i])
-                post = ' '.join(token_to_text(x) for x in tokens_of['expected'][i+1:i+context+1])
-                res = {system: token_to_text(tokens_of[system][i]) for system in systems}
-                yield (pre, res, post)
+def collect_failed_tokens(doc_pack, context):
+    tokens_of = {system: doc_pack[system].tokens() for system in doc_pack.docs}
+    for i in range(len(tokens_of['expected'])):
+        res = {system: str(tokens_of[system][i]) for system in doc_pack.docs}
+        if len(set(res.values())) > 1:
+            pre_nonhebrew, _, post_nonhebrew = tokens_of['expected'][i].split_on_hebrew()
+            pre = ' '.join(token_to_text(x) for x in tokens_of['expected'][i-context:i]) + ' ' + pre_nonhebrew
+            post = post_nonhebrew + " " + ' '.join(token_to_text(x) for x in tokens_of['expected'][i+1:i+context+1])
+            res = {system: token_to_text(tokens_of[system][i].split_on_hebrew()[1]) for system in doc_pack.docs}
+            yield (pre, res, post)
 
 
 def metric_cha(doc_pack: DocumentPack) -> float:
@@ -199,6 +200,12 @@ def all_stats(*systems):
     for system in systems:
         results = macro_average(system)
         format_latex(system, results)
+        results = micro_average(system)
+        format_latex(system, results)
+        ew = 1-results['wor']
+        ev = 1 - results['voc']
+        print(f'{(ew-ev)/ew:.2%}')
+        print()
 
 
 def adapt_morfix(expected_filename):
@@ -249,9 +256,17 @@ def adapt_morfix(expected_filename):
         print(hebrew.items_to_text(fixed_actual), file=f)
 
 
+def all_failed():
+    for doc_pack in iter_documents('expected', 'Morfix', 'Dicta', 'Nakdimon'):
+        for pre, ngrams, post in collect_failed_tokens(doc_pack, context=3):
+            res = "|".join(ngrams.values())
+            print(f'{doc_pack.source}|{doc_pack.name}| {pre}|{res}|{post} |')
+
+
 if __name__ == '__main__':
-    for pre, ngrams, post in collect_failed_tokens('expected', 'Nakdimon', 'Morfix', 'Dicta', context=3):
-        res = "/".join(ngrams.values())
-        print(f'{pre} [{res}] {post}')
-        print()
-    # all_stats('Dicta')
+    all_stats(
+        'Snopi',
+        'Morfix',
+        'Dicta',
+        'Nakdimon',
+    )

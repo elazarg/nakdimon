@@ -6,3 +6,4 @@ checkpoints
 group*-shard*
 models
 wandb
+cert

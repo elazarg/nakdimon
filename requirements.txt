@@ -1,8 +1,9 @@
-numpy
-tensorflow
-tensorflowjs
-wandb
-flask
-beautifulsoup4
-lxml
 cachier
+numpy
+requests
+requests-oauthlib
+Flask
+keras
+tensorflowjs
+tensorflow
+wandb

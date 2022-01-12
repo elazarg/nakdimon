@@ -32,16 +32,21 @@ class NakdimonParams:
 
     batch_size = 128
     units = 400
-
     corpus = {
         'mix': tuple([
             'hebrew_diacritized/poetry',
             'hebrew_diacritized/rabanit',
-            'hebrew_diacritized/pre_modern'
+            'hebrew_diacritized/pre_modern',
+            'hebrew_diacritized/shortstoryproject_predotted'
+        ]),
+        'dicta': tuple([
+            'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
         'modern': tuple([
             'hebrew_diacritized/modern',
-            'hebrew_diacritized/dictaTestCorpus'
+            'hebrew_diacritized/dictaTestCorpus',
+            'hebrew_diacritized/new',
+            'hebrew_diacritized/validation'
         ])
     }
 
@@ -52,11 +57,12 @@ class NakdimonParams:
     def loss(self, y_true, y_pred):
         return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
 
-    def epoch_params(self, train_dict):
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 0e-4, train_dict['mix'][0], self.batch_size))
-
-        lrs = [30e-4, 30e-4, 30e-4,  8e-4, 1e-4]
-        yield ('modern', len(lrs), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs[epoch - 1]))
+    def epoch_params(self, data):
+        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        lrs1 = [30e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        lrs2 = [10e-4, 10e-4, 3e-4]
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
     def deterministic(self):
         np.random.seed(2)
@@ -111,12 +117,17 @@ def ablation_metrics(model):
     import nakdimon, metrics, hebrew
 
     def calculate_metrics(model, validation_path):
-        for file in Path(validation_path).glob('*'):
-            print(file, ' ' * 30, end='\r', flush=True)
-            with open(file, encoding='utf8') as f:
-                expected = metrics.cleanup(f.read())
-            actual = metrics.cleanup(nakdimon.predict(model, hebrew.remove_niqqud(expected), maxlen=MAXLEN))
-            yield metrics.all_metrics(actual, expected)
+        for path in Path(validation_path).glob('*'):
+            print(path, ' ' * 30, end='\r', flush=True)
+            doc = metrics.read_document('expected', path)
+            yield metrics.all_metrics(metrics.DocumentPack(
+                path.parent.name,
+                path.name,
+                {
+                    'expected': doc,
+                    'actual': metrics.Document('actual', 'Nakdimon', nakdimon.predict(model, hebrew.remove_niqqud(doc.text), maxlen=MAXLEN))
+                }
+            ))
 
     return metrics.metricwise_mean(calculate_metrics(model, VALIDATION_PATH))
 
@@ -179,33 +190,6 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
-class FinalWithShortStory(NakdimonParams):
-    corpus = {
-        'mix': tuple([
-            'hebrew_diacritized/poetry',
-            'hebrew_diacritized/rabanit',
-            'hebrew_diacritized/pre_modern',
-            'hebrew_diacritized/shortstoryproject_predotted'
-        ]),
-        'dicta': tuple([
-            'hebrew_diacritized/shortstoryproject_Dicta',
-        ]),
-        'modern': tuple([
-            'hebrew_diacritized/modern',
-            'hebrew_diacritized/dictaTestCorpus',
-            'hebrew_diacritized/new',
-            'hebrew_diacritized/validation'
-        ])
-    }
-
-    def epoch_params(self, data):
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
-        lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
-        lrs2 = [10e-4, 10e-4, 3e-4]
-        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
-
-
 if __name__ == '__main__':
-    model = train(FinalWithShortStory(), 'FinalWithShortStory:forgotten', ablation=False)
-    model.save(f'./models/FinalWithShortStory.h5')
+    model = train(Full(), 'Full', ablation=False)
+    model.save(f'./models/Full.h5')

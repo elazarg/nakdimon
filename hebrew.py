@@ -213,18 +213,20 @@ class Token:
     def __lt__(self, other: 'Token'):
         return (self.to_undotted(), str(self)) < (other.to_undotted(), str(other))
 
-    def strip_nonhebrew(self) -> 'Token':
+    def split_on_hebrew(self) -> tuple[str, 'Token', str]:
         start = 0
         end = len(self.items) - 1
         while True:
             if start >= len(self.items):
-                return Token(())
+                return ('', Token(()), '')
             if self.items[start].letter in HEBREW_LETTERS + ANY_NIQQUD:
                 break
             start += 1
         while self.items[end].letter not in HEBREW_LETTERS + ANY_NIQQUD:
             end -= 1
-        return Token(self.items[start:end+1])
+        return (''.join(c.letter for c in self.items[:start]),
+                Token(self.items[start:end+1]),
+                ''.join(c.letter for c in self.items[end+1:]))
 
     def __bool__(self):
         return bool(self.items)
@@ -246,23 +248,29 @@ class Token:
         return Token(tuple([c.vocalize() for c in self.items]))
 
 
-def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem]) -> Iterator[HebrewItem]:
+def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem], strip_nonhebrew: bool) -> Iterator[HebrewItem]:
     current = []
     for c in char_iterator:
         if c.letter.isspace() or c.letter == '-':
             if current:
-                tokens_list.append(Token(tuple(current)).strip_nonhebrew())
+                token = Token(tuple(current))
+                if strip_nonhebrew:
+                    _, token, _ = token.split_on_hebrew()
+                tokens_list.append(token)
             current = []
         else:
             current.append(c)
         yield c
     if current:
-        tokens_list.append(Token(tuple(current)).strip_nonhebrew())
+        token = Token(tuple(current))
+        if strip_nonhebrew:
+            _, token, _ = token.split_on_hebrew()
+        tokens_list.append(token)
 
 
-def tokenize(iterator: Iterator[HebrewItem]) -> List[Token]:
+def tokenize(iterator: Iterator[HebrewItem], strip_nonhebrew=False) -> List[Token]:
     tokens = []
-    _ = list(tokenize_into(tokens, iterator))
+    _ = list(tokenize_into(tokens, iterator, strip_nonhebrew))
     return tokens
 
 
@@ -274,7 +282,8 @@ def collect_wordmap(tokens: Iterable[Token]):
 
 
 def collect_tokens(paths: Iterable[str]):
-    return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)))
+    return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)),
+                    strip_nonhebrew=True)
 
 
 def stuff(tokens):
@@ -344,7 +353,7 @@ def print_longest_undotted_files(path):
 
 if __name__ == '__main__':
     # print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
-    tokens = collect_tokens(['hebrew_diacritized/shortstoryproject_Dicta'])
+    tokens = collect_tokens(['tests/test/expected'])
     # stuff(tokens)
     print(len(tokens))
     # 
