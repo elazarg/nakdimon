@@ -9,6 +9,7 @@ import dataset
 from dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
 import schedulers
 
+import transformer
 from pathlib import Path
 assert tf.config.list_physical_devices('GPU')
 
@@ -90,10 +91,81 @@ class NakdimonParams:
 
 
 class TrainingParams(NakdimonParams):
-    validation_rate = 0
+    corpus = {
+        'mix': tuple([
+            'hebrew_diacritized/poetry',
+            'hebrew_diacritized/rabanit',
+            'hebrew_diacritized/pre_modern',
+            'hebrew_diacritized/shortstoryproject_predotted'
+        ]),
+        'dicta': tuple([
+            'hebrew_diacritized/shortstoryproject_Dicta',
+        ]),
+        'modern': tuple([
+            'hebrew_diacritized/modern',
+            'hebrew_diacritized/dictaTestCorpus',
+            'hebrew_diacritized/new'
+        ])
+    }
 
     def __init__(self, units=NakdimonParams.units):
         self.units = units
+
+
+class Transformer(TrainingParams):
+    batch_size = 64
+
+    def build_model(self) -> tf.keras.Model:
+        from tensorflow.keras import layers
+
+        inp = tf.keras.Input(shape=(None,), batch_size=None)
+
+        layer = transformer.TokenAndPositionEmbedding(80, LETTERS_SIZE, self.units)(inp)
+        layer = transformer.TransformerBlock(embed_dim=self.units, num_heads=4, ff_dim=self.units, rate=0.1)(layer)
+        layer = layers.Dense(self.units, activation='relu')(layer)
+        layer = transformer.TransformerBlock(embed_dim=self.units, num_heads=4, ff_dim=self.units, rate=0.1)(layer)
+        layer = layers.Dense(self.units, activation='relu')(layer)
+        outputs = [
+            layers.Dense(NIQQUD_SIZE, name='N')(layer),
+            layers.Dense(DAGESH_SIZE, name='D')(layer),
+            layers.Dense(SIN_SIZE, name='S')(layer),
+        ]
+        return tf.keras.Model(inputs=inp, outputs=outputs)
+
+    def epoch_params(self, data):
+        lrs0 = [20e-4, 5e-4]
+        yield ('mix', len(lrs0), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs0[epoch]))
+        lrs1 = [10e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-len(lrs0)]))
+        lrs2 = [10e-4] * 6
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs0)-len(lrs1)]))
+
+
+class TwoLevelLSTM(TrainingParams):
+    batch_size = 128
+
+    def build_model(self) -> tf.keras.Model:
+        from tensorflow.keras import layers
+
+        inp = tf.keras.Input(shape=(None,), batch_size=None)
+
+        layer = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
+        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(layer)
+        layer = layers.Bidirectional(layers.LSTM(self.units, return_sequences=True, dropout=0.1), merge_mode='sum')(layer)
+        outputs = [
+            layers.Dense(NIQQUD_SIZE, name='N')(layer),
+            layers.Dense(DAGESH_SIZE, name='D')(layer),
+            layers.Dense(SIN_SIZE, name='S')(layer),
+        ]
+        return tf.keras.Model(inputs=inp, outputs=outputs)
+
+    def epoch_params(self, data):
+        lrs0 = [3e-4]
+        yield ('mix', 1, schedulers.CircularLearningRate(1e-4, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        lrs1 = [30e-4, 10e-4]
+        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-len(lrs0)]))
+        lrs2 = [10e-4, 10e-4, 3e-4]
+        yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-len(lrs0)]))
 
 
 def get_xy(d):

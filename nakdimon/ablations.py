@@ -1,5 +1,7 @@
+import keras
 import tensorflow as tf
 
+import train
 from train import TrainingParams, train_ablation
 import schedulers
 
@@ -212,8 +214,10 @@ class TasteModernFirst(FullUpdated):
 
 
 if __name__ == '__main__':
-    units = 400
-    for cls in [FullOrdered]:
-        for i in range(3):
-            train_ablation(cls(units), group=f"{cls.__name__}2:2022")
+    # units = 400
+    print(train.Full().build_model().count_params())
+    # for cls in [train.TwoLevelLSTM]:
+    #     for i in range(1):
+    #         print(cls(units).build_model().count_params())
+    #         train_ablation(cls(units), group=f"{cls.__name__}:2022")
 

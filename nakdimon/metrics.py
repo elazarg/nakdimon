@@ -66,9 +66,6 @@ def iter_documents_by_folder(*systems) -> typing.Iterator[list[DocumentPack]]:
         yield [read_document_pack(path_to_expected, *systems) for path_to_expected in folder.iterdir()]
 
 
-basepath = Path('tests/test/expected')
-
-
 def system_path_from_expected(path: Path, system: str) -> Path:
     return Path(str(path).replace('expected', system))
 
@@ -264,9 +261,11 @@ def all_failed():
 
 
 if __name__ == '__main__':
+    basepath = Path('tests/dicta/expected')
     all_stats(
         'Snopi',
         'Morfix',
         'Dicta',
-        'Nakdimon',
+        'Nakdimon0',
+        # 'Nakdimon',
     )

@@ -136,6 +136,19 @@ def fetch_dicta(text: str) -> str:
     return result
 
 
+def fetch_dicta_version() -> str:
+    url = 'https://nakdan-4-0.loadbalancer.dicta.org.il/api/'
+    r = requests.get(url + 'debug')
+    r.raise_for_status()
+    model_version = r.json()['version'].split("\n")[4].strip()
+
+    r = requests.get(url + 'wlver')
+    r.raise_for_status()
+    wordlist_version = r.json()['version']
+
+    return f'{model_version}, {wordlist_version}'
+
+
 @piecewise(10000)
 def fetch_nakdimon(text: str) -> str:
     url = 'http://127.0.0.1:5000'
@@ -237,9 +250,4 @@ def fetch_dicta_count_ambiguity(text: str):
 fetch_dicta.clear_cache()
 
 if __name__ == '__main__':
-    undotted_text = 'לנשיא- לא המתנת.\nתחילה יצאת לבקר את רבקה גובר ז"ל, "אם הבנים", ששכלה את'
-    dotted_text   = 'לַנָּשִׂיא-לֹא הִמְתַּנְתָּ.\nתְּחִילָּה יָצָאתָ לְבַקֵּר אֶת רִבְקָה גּוֹבֵר זַ"ל, "אֵם הַבָּנִים", שֶׁשִּׂכְלָהּ אֵת'
-    print(fix_snopi(dotted_text, undotted_text))
-    undotted_text = "והפוליטית במדינת ישראל סיכמת בצניעות רבה.\n'אני מקווה' כך אמרת, 'שבתפקידיי"
-    dotted_text   = "וְהַפּוֹלִיטִית בַּמְּדִינַת יִשְׂרָאֵל סִיכַּמְתָּ בִּצְנִיעוּת רַבָּה.\n'אֲנִי מְקַוֶּוה' כָּךְ אָמַרְתָּ, 'שֶׁבְּתַפְקִידַי"
-    print(fix_snopi(dotted_text, undotted_text))
+    print(fetch_dicta_version())
