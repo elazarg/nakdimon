@@ -1,4 +1,9 @@
-from typing import List
+from __future__ import annotations
+
+import string
+import typing
+from collections import defaultdict, Counter
+from typing import Iterable
 import re
 import json
 from functools import wraps
@@ -14,7 +19,7 @@ class DottingError(RuntimeError):
     pass
 
 
-def split_string_by_length(text: str, maxlen) -> List[str]:
+def split_string_by_length(text: str, maxlen) -> list[str]:
     return [''.join(s).strip() for s in hebrew.split_by_length(text, maxlen)]
 
 
@@ -37,6 +42,7 @@ def fix_snopi(dotted_text: str, undotted_text: str) -> str:
         elif undotted_text[i] != items[i].letter:
             items.insert(i, hebrew.HebrewItem(undotted_text[i], '', '', '', ''))
     return hebrew.items_to_text(items)
+
 
 @cachier()
 @piecewise(75)  # estimated maximum for reasonable time
@@ -218,10 +224,77 @@ SYSTEMS = {
     'Morfix': fetch_morfix,  # terms-of-use issue
     'Dicta': fetch_dicta,
     'Nakdimon': fetch_nakdimon,
-    'NakdimonNoDicta': fetch_nakdimon_no_dicta,
-    'NakdimonFullNew': fetch_nakdimon_fullnew,
-    'NakdimonFinalWithShortStory': fetch_nakdimon_FinalWithShortStory,
 }
+
+
+class MajorityDiacritizer:
+    dictionary: dict[str, str]
+
+    @staticmethod
+    def update_possibilities(possibilities: defaultdict[str, Counter], train_paths: tuple[str, ...]) -> None:
+        import hebrew
+        for token in hebrew.collect_tokens(train_paths):
+            word = str(token).replace(hebrew.RAFE, '')
+            if word:
+                left, word, right = hebrew.split_nonhebrew(word)
+                if word:
+                    possibilities[hebrew.remove_niqqud(word)][word] += 1
+                    for t in token.items:
+                        if hebrew.is_hebrew_letter(t.letter):
+                            possibilities[t.letter][str(t).replace(hebrew.RAFE, '')] += 1
+
+    def __init__(self, possibilities: defaultdict[str, Counter]) -> None:
+        self.dictionary = {word: options.most_common(1)[0][0]
+                           for word, options in possibilities.items()}
+
+    def is_oov(self, word: str) -> bool:
+        left, word, right = hebrew.split_nonhebrew(hebrew.remove_niqqud(word))
+        return word not in self.dictionary
+
+    def diacritize_token(self, word: str) -> str:
+        left, word, right = hebrew.split_nonhebrew(word)
+        word = hebrew.remove_niqqud(word)
+        if word in self.dictionary:
+            result = self.dictionary[word]
+        else:
+            print(word)
+            result = word  # ''.join([self.dictionary.get(letter, '') for letter in word])
+        return left + result + right
+
+    def __call__(self, text: str) -> str:
+        return ' '.join([self.diacritize_token(token) for token in hebrew.remove_niqqud(text).split()])
+
+
+@cachier()
+def prepare_majority():
+    possibilities = defaultdict(Counter)
+    print('Preparing MajorityModern...')
+    res = {}
+
+    MajorityDiacritizer.update_possibilities(possibilities, tuple([
+        'hebrew_diacritized/modern/'
+    ]))
+    res['MajorityModern'] = MajorityDiacritizer(possibilities)
+
+    if True:
+        print('Preparing MajorityAllNoDicta...')
+        MajorityDiacritizer.update_possibilities(possibilities, tuple([
+            'hebrew_diacritized/poetry',
+            'hebrew_diacritized/rabanit',
+            'hebrew_diacritized/pre_modern',
+            'hebrew_diacritized/shortstoryproject_predotted',
+            'hebrew_diacritized/shortstoryproject_Dicta',
+            'hebrew_diacritized/new',
+            'hebrew_diacritized/validation'
+        ]))
+        res['MajorityAllNoDicta'] = MajorityDiacritizer(possibilities)
+
+        print('Preparing MajorityAllWithDicta...')
+        MajorityDiacritizer.update_possibilities(possibilities, ('hebrew_diacritized/dictaTestCorpus',))
+        res['MajorityAllWithDicta'] = MajorityDiacritizer(possibilities)
+    print('Done preparing.')
+
+    return res
 
 
 def fetch_dicta_count_ambiguity(text: str):
@@ -247,7 +320,10 @@ def fetch_dicta_count_ambiguity(text: str):
 
 # fetch_snopi.clear_cache()
 # fetch_nakdimon_fullnew.clear_cache()
-fetch_dicta.clear_cache()
+# fetch_dicta.clear_cache()
+# prepare_majority.clear_cache()
+
 
 if __name__ == '__main__':
-    print(fetch_dicta_version())
+    SYSTEMS.update(prepare_majority())
+    print(SYSTEMS['MajorityModern']("אָנוּ חַיִּים בַּמְּצִיאוּת שֶׁל סִכְסוּךְ עָקוֹב מִדם"))

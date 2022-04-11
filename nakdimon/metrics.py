@@ -1,8 +1,9 @@
-import typing
+from typing import Iterator
 from pathlib import Path
 from dataclasses import dataclass
 import numpy as np
 
+import external_apis
 import hebrew
 
 
@@ -55,13 +56,13 @@ def read_document_pack(path_to_expected: Path, *systems: str) -> DocumentPack:
                          for system in systems})
 
 
-def iter_documents(*systems) -> typing.Iterator[DocumentPack]:
+def iter_documents(*systems) -> Iterator[DocumentPack]:
     for folder in basepath.iterdir():
         for path_to_expected in folder.iterdir():
             yield read_document_pack(path_to_expected, *systems)
 
 
-def iter_documents_by_folder(*systems) -> typing.Iterator[list[DocumentPack]]:
+def iter_documents_by_folder(*systems) -> Iterator[list[DocumentPack]]:
     for folder in basepath.iterdir():
         yield [read_document_pack(path_to_expected, *systems) for path_to_expected in folder.iterdir()]
 
@@ -113,13 +114,17 @@ def is_hebrew(token: hebrew.Token) -> bool:
     return len([c for c in token.items if c.letter in hebrew.HEBREW_LETTERS]) > 1
 
 
+def is_oov(word: str) -> bool:
+    return vocabulary.is_oov(word)
+
+
 def metric_wor(doc_pack: DocumentPack) -> float:
     """
     Calculate token-level agreement between actual and expected,
     for tokens containing at least 2 Hebrew letters.
     """
     return mean_equal((x, y) for x, y in zip(doc_pack.actual.tokens(), doc_pack.expected.tokens())
-                      if is_hebrew(x))
+                      if is_hebrew(x) and is_oov(str(x)))
 
 
 def metric_voc(doc_pack: DocumentPack) -> float:
@@ -128,38 +133,40 @@ def metric_voc(doc_pack: DocumentPack) -> float:
     for tokens containing at least 2 Hebrew letters.
     """
     return mean_equal((x, y) for x, y in zip(doc_pack.actual.vocalized_tokens(), doc_pack.expected.vocalized_tokens())
-                      if is_hebrew(x))
+                      if is_hebrew(x) and is_oov(str(x)))
 
 
 def token_to_text(token: hebrew.Token) -> str:
     return str(token).replace(hebrew.RAFE, '')
 
 
-def mean_equal(*pair_iterables):
+def mean_equal(*pair_iterables) -> float:
     total = 0
     acc = 0
     for pair_iterable in pair_iterables:
         pair_iterable = list(pair_iterable)
         total += len(pair_iterable)
         acc += sum(x == y for x, y in pair_iterable)
+    if not total:
+        return 0
     return acc / total
 
 
-def all_diffs_for_files(doc_pack: DocumentPack, system1: str, system2: str) -> None:
-    triples = [(e, a1, a2) for (e, a1, a2) in zip(doc_pack.expected.sentences(),
-                                                  doc_pack[system1].sentences(),
-                                                  doc_pack[system2].sentences())
-               if metric_wor(a1, e) < 0.90 or metric_wor(a2, e) < 0.90]
-    triples.sort(key=lambda e_a1_a2: metric_cha(e_a1_a2[2], e_a1_a2[0]))
-    for (e, a1, a2) in triples[:20]:
-        print(f"{system1}: {metric_wor(a1, e):.2%}; {system2}: {metric_wor(a2, e):.2%}")
-        print('סבבה:', a1)
-        print('מקור:', e)
-        print('גרוע:', a2)
-        print()
+# def all_diffs_for_files(doc_pack: DocumentPack, system1: str, system2: str) -> None:
+#     triples = [(e, a1, a2) for (e, a1, a2) in zip(doc_pack.expected.sentences(),
+#                                                   doc_pack[system1].sentences(),
+#                                                   doc_pack[system2].sentences())
+#                if metric_wor(a1, e) < 0.90 or metric_wor(a2, e) < 0.90]
+#     triples.sort(key=lambda e_a1_a2: metric_cha(e_a1_a2[2], e_a1_a2[0]))
+#     for (e, a1, a2) in triples[:20]:
+#         print(f"{system1}: {metric_wor(a1, e):.2%}; {system2}: {metric_wor(a2, e):.2%}")
+#         print('סבבה:', a1)
+#         print('מקור:', e)
+#         print('גרוע:', a2)
+#         print()
 
 
-def all_metrics(doc_pack: DocumentPack):
+def all_metrics(doc_pack: DocumentPack) -> dict[str, float]:
     return {
         'dec': metric_dec(doc_pack),
         'cha': metric_cha(doc_pack),
@@ -168,7 +175,7 @@ def all_metrics(doc_pack: DocumentPack):
     }
 
 
-def metricwise_mean(iterable):
+def metricwise_mean(iterable) -> dict[str, float]:
     items = list(iterable)
     keys = items[0].keys()
     return {
@@ -177,23 +184,23 @@ def metricwise_mean(iterable):
     }
 
 
-def macro_average(system):
+def macro_average(system: str) -> dict[str, float]:
     return metricwise_mean(
         metricwise_mean(all_metrics(doc_pack) for doc_pack in folder_packs)
         for folder_packs in iter_documents_by_folder('expected', system)
     )
 
 
-def micro_average(system):
+def micro_average(system: str) -> dict[str, float]:
     return metricwise_mean(all_metrics(doc_pack) for doc_pack in iter_documents('expected', system))
 
 
-def format_latex(system, results):
+def format_latex(system, results) -> None:
     print(r'{system} & {dec:.2%} & {cha:.2%} & {wor:.2%} & {voc:.2%} \\'.format(system=system, **results)
           .replace('%', ''))
 
 
-def all_stats(*systems):
+def all_stats(*systems) -> None:
     for system in systems:
         results = macro_average(system)
         format_latex(system, results)
@@ -205,7 +212,7 @@ def all_stats(*systems):
         print()
 
 
-def adapt_morfix(expected_filename):
+def adapt_morfix(expected_filename: str) -> None:
     with open(expected_filename, encoding='utf8') as f:
         expected = list(hebrew.iterate_dotted_text(f.read()))
     actual_filename = expected_filename.replace('expected', 'MorfixOriginal')
@@ -218,10 +225,8 @@ def adapt_morfix(expected_filename):
         fixed_actual.append(actual[j])
         if j + 1 >= len(actual):
             break
-        # print(fixed_actual[-1].letter, end='', flush=True)
         e = expected[i+1].letter
         a = actual[j+1].letter
-        # print(a, end='', flush=True)
         if e != a:
             assert actual[j + 1].letter == expected[i + 2].letter, hebrew.items_to_text(actual[j-15:j+15]) + ' != ' + hebrew.items_to_text(expected[i-15:i+15])
             if e == 'י' or e == 'א':
@@ -244,7 +249,6 @@ def adapt_morfix(expected_filename):
                 fixed_actual.append(hebrew.HebrewItem(e, e, '', '', add))
             else:
                 assert False, hebrew.items_to_text(actual[j-15:j+15])
-            # print(fixed_actual[-1].letter, end='', flush=True)
             i += 1
         i += 1
     fixed_actual_filename = Path(expected_filename.replace('expected', 'Morfix'))
@@ -253,7 +257,7 @@ def adapt_morfix(expected_filename):
         print(hebrew.items_to_text(fixed_actual), file=f)
 
 
-def all_failed():
+def all_failed() -> None:
     for doc_pack in iter_documents('expected', 'Morfix', 'Dicta', 'Nakdimon'):
         for pre, ngrams, post in collect_failed_tokens(doc_pack, context=3):
             res = "|".join(ngrams.values())
@@ -261,11 +265,26 @@ def all_failed():
 
 
 if __name__ == '__main__':
+    external_apis.SYSTEMS.update(external_apis.prepare_majority())
+
+    vocabulary = external_apis.SYSTEMS['MajorityAllNoDicta']
     basepath = Path('tests/dicta/expected')
     all_stats(
-        'Snopi',
-        'Morfix',
-        'Dicta',
+        # 'Snopi',
+        # 'Morfix',
+        # 'Dicta',
         'Nakdimon0',
-        # 'Nakdimon',
+        'MajorityModern',
+        'MajorityAllNoDicta',
+    )
+
+    vocabulary = external_apis.SYSTEMS['MajorityAllWithDicta']
+    basepath = Path('tests/test/expected')
+    all_stats(
+        # 'Snopi',
+        # 'Morfix',
+        # 'Dicta',
+        'Nakdimon',
+        'MajorityModern',
+        'MajorityAllWithDicta',
     )

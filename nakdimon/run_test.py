@@ -1,16 +1,16 @@
 import collections
 from pathlib import Path
 
+import external_apis
 import utils
 
-from external_apis import SYSTEMS, fetch_dicta_count_ambiguity, DottingError
 import hebrew
 
 
-def diacritize_all(system, basepath):
-    diacritizer = SYSTEMS[system]
+def diacritize_all(system: str, basepath: str) -> None:
+    diacritizer = external_apis.SYSTEMS[system]
 
-    def diacritize_this(filename):
+    def diacritize_this(filename: str) -> None:
         infile = Path(filename)
         outfile = Path(filename.replace('expected', system))
         if outfile.exists():
@@ -27,11 +27,11 @@ def diacritize_all(system, basepath):
     for filename in utils.iterate_files([basepath]):
         try:
             diacritize_this(filename)
-        except DottingError:
+        except external_apis.DottingError:
             print("Failed to dot")
 
 
-def count_all_ambiguity(basepath):
+def count_all_ambiguity(basepath: str) -> None:
     c = collections.Counter()
     for filename in utils.iterate_files([basepath]):
         print(filename, end=' ' * 30 + '\r', flush=True)
@@ -40,7 +40,7 @@ def count_all_ambiguity(basepath):
             expected = r.read()
 
         cleaned = hebrew.remove_niqqud(expected)
-        actual = fetch_dicta_count_ambiguity(cleaned)
+        actual = external_apis.fetch_dicta_count_ambiguity(cleaned)
         c.update(actual)
 
     with open('count_ambiguity.txt', 'w', encoding='utf8') as f:
@@ -48,7 +48,11 @@ def count_all_ambiguity(basepath):
 
 
 if __name__ == '__main__':
-    diacritize_all('Dicta', 'tests/dicta/expected')
+    external_apis.SYSTEMS.update(external_apis.prepare_majority())
+    diacritize_all('MajorityAllNoDicta', 'tests/dicta/expected')
+    diacritize_all('MajorityAllWithDicta', 'tests/test/expected')
+    diacritize_all('MajorityModern', 'tests/dicta/expected')
+    diacritize_all('MajorityModern', 'tests/test/expected')
     # diacritize_all('Snopi', 'tests/test/expected')
     # diacritize_all('Dicta', '../shortstoryproject')
     # print(diacritize("Nakdimon", 'tmp_expected.txt'))

@@ -118,6 +118,10 @@ def is_hebrew_letter(letter: str) -> bool:
     return '\u05d0' <= letter <= '\u05ea'
 
 
+def is_hebrew_niqqud(letter: str) -> bool:
+    return letter in ANY_NIQQUD
+
+
 def can_dagesh(letter):
     return letter in ('בגדהוזטיכלמנספצקשת' + 'ךף')
 
@@ -170,7 +174,7 @@ def iterate_dotted_text(text: str) -> Iterator[HebrewItem]:
         yield HebrewItem(letter, normalized, dagesh, sin, niqqud)
 
 
-def iterate_file(path):
+def iterate_file(path) -> Iterator[HebrewItem]:
     with open(path, encoding='utf-8') as f:
         text = ''.join(s + ' ' for s in f.read().split())
         try:
@@ -180,7 +184,7 @@ def iterate_file(path):
             raise
 
 
-def is_space(c):
+def is_space(c) -> bool:
     if isinstance(c, HebrewItem):
         return c.letter == ' '
     elif isinstance(c, str):
@@ -306,14 +310,7 @@ def stuff(tokens):
 
 
 def remove_niqqud(text: str) -> str:
-    return re.sub('[\u05B0-\u05BC\u05C1\u05C2ׇ\u05c7]', '', text)
-
-
-def average_wordlen(path):
-    token_lens = [len(t.strip_nonhebrew().items) for t in collect_tokens([path])
-                  if len(t.strip_nonhebrew().items) > 1]
-    import numpy as np
-    return np.mean(token_lens)
+    return re.sub('[\u05B0-\u05BC\u05C1\u05C2ׇ\u05c7\u05BF]', '', text)
 
 
 def name_of(c):
@@ -351,13 +348,33 @@ def print_longest_undotted_files(path):
             print(filename)
 
 
+def lsplit_nonhebrew(word: str) -> tuple[str, str]:
+    assert word
+    i = 0
+    for i in range(len(word)):
+        if is_hebrew_letter(word[i]) or is_hebrew_niqqud(word[i]):
+            break
+    return word[:i], word[i:]
+
+
+def rsplit_nonhebrew(word: str) -> tuple[str, str]:
+    assert word
+    right, word = lsplit_nonhebrew(word[::-1])
+    return word[::-1], right[::-1]
+
+
+def split_nonhebrew(word: str) -> tuple[str, str, str]:
+    assert word
+    left, word = lsplit_nonhebrew(word)
+    word, right = rsplit_nonhebrew(word)
+    return left, word, right
+
+
 if __name__ == '__main__':
-    # print_longest_undotted_files(['../gender_dots/scraping/scrape_data/Dicta'])
-    tokens = collect_tokens(['tests/test/expected'])
-    # stuff(tokens)
-    print(len(tokens))
-    # 
-    # for i, t in enumerate(tokens):
-    #     vv = 'פניה'
-    #     if vv == remove_niqqud(str(t)):
-    #         print(' '.join(str(x).replace(RAFE, '') for x in tokens[i-1:i+2]))
+    # tokens = collect_tokens(['tests/test/expected'])
+    # print(len(tokens))
+    # for k, v in Counter(remove_niqqud(str(token)) for token in tokens).items():
+    #     print(k, v)
+    print(lsplit_nonhebrew('-חריגים,'))
+    print(rsplit_nonhebrew('-חריגים,'))
+    print(split_nonhebrew('-חריגים,'))

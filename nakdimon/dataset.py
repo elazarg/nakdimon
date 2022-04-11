@@ -1,4 +1,5 @@
-from typing import Tuple, List
+from __future__ import annotations
+
 import random
 import numpy as np
 
@@ -11,13 +12,13 @@ import utils
 class CharacterTable:
     MASK_TOKEN = ''
 
-    def __init__(self, chars):
+    def __init__(self, chars: list[str]) -> None:
         # make sure to be consistent with JS
         self.chars = [CharacterTable.MASK_TOKEN] + chars
         self.char_indices = dict((c, i) for i, c in enumerate(self.chars))
         self.indices_char = dict((i, c) for i, c in enumerate(self.chars))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.chars)
 
     def to_ids(self, css):
@@ -25,7 +26,7 @@ class CharacterTable:
             [self.char_indices[c] for c in cs] for cs in css
         ]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.chars)
 
 
@@ -76,10 +77,10 @@ class Data:
     sin: np.ndarray = None
     niqqud: np.ndarray = None
 
-    filenames: Tuple[str, ...] = ()
+    filenames: tuple[str, ...] = ()
 
     @staticmethod
-    def concatenate(others):
+    def concatenate(others) -> Data:
         self = Data()
         self.text = np.concatenate([x.text for x in others])
         self.normalized = np.concatenate([x.normalized for x in others])
@@ -88,10 +89,10 @@ class Data:
         self.niqqud = np.concatenate([x.niqqud for x in others])
         return self
 
-    def shapes(self):
-        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape #, self.kind.shape
+    def shapes(self) -> tuple[tuple[int, ...], ...]:
+        return self.text.shape, self.normalized.shape, self.dagesh.shape, self.sin.shape, self.niqqud.shape
 
-    def shuffle(self):
+    def shuffle(self) -> None:
         utils.shuffle_in_unison(
             self.text,
             self.normalized,
@@ -99,32 +100,31 @@ class Data:
             self.niqqud,
             self.sin
         )
-        return self
 
     @staticmethod
-    def from_text(heb_items, maxlen: int) -> 'Data':
+    def from_text(heb_items, maxlen: int) -> Data:
         assert heb_items
-        self = Data()
+        data = Data()
         text, normalized, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
 
         def pad(ords, dtype='int32', value=0):
             return utils.pad_sequences(ords, maxlen=maxlen, dtype=dtype, value=value)
 
-        self.normalized = pad(letters_table.to_ids(normalized))
-        self.dagesh = pad(dagesh_table.to_ids(dagesh))
-        self.sin = pad(sin_table.to_ids(sin))
-        self.niqqud = pad(niqqud_table.to_ids(niqqud))
-        self.text = pad(text, dtype='<U1', value=0)
-        return self
+        data.normalized = pad(letters_table.to_ids(normalized))
+        data.dagesh = pad(dagesh_table.to_ids(dagesh))
+        data.sin = pad(sin_table.to_ids(sin))
+        data.niqqud = pad(niqqud_table.to_ids(niqqud))
+        data.text = pad(text, dtype='<U1', value=0)
+        return data
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.normalized.shape[0]
 
-    def print_stats(self):
+    def print_stats(self) -> None:
         print(self.shapes())
 
 
-def read_corpora(base_paths):
+def read_corpora(base_paths) -> tuple[tuple[str, list[hebrew.HebrewItem]], ...]:
     return tuple([(filename, list(hebrew.iterate_file(filename))) for filename in utils.iterate_files(base_paths)])
 
 
