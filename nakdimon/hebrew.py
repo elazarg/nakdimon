@@ -251,6 +251,9 @@ class Token:
     def vocalize(self) -> 'Token':
         return Token(tuple([c.vocalize() for c in self.items]))
 
+    def is_hebrew(self) -> bool:
+        return len([c for c in self.items if c.letter in HEBREW_LETTERS]) > 1
+
 
 def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem], strip_nonhebrew: bool) -> Iterator[HebrewItem]:
     current = []
@@ -288,6 +291,10 @@ def collect_wordmap(tokens: Iterable[Token]):
 def collect_tokens(paths: Iterable[str]):
     return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)),
                     strip_nonhebrew=True)
+
+
+def count_hebrew_tokens(paths: Iterable[str]):
+    return sum(1 for token in collect_tokens(paths) if token.is_hebrew())
 
 
 def stuff(tokens):
@@ -370,11 +377,65 @@ def split_nonhebrew(word: str) -> tuple[str, str, str]:
     return left, word, right
 
 
+def table_2():
+    from pathlib import Path
+    USER_GEN = r"{*}         & User-gen.  & Blogs, forums "
+    NEWS_MAG = r"{*}         & News / Mag & Online outlets"
+    BOOKS =    r"{$\dagger$} & Literary   & Books, forums "
+    WIKI =     r"{*}         & Wiki       & he.wikipedia  "
+    OFFICIAL = r"{*}         & Official   & gov.il        "
+    YANSHUF =  r"            & News       & Yanshuf       "
+    DICTA =    r"            & Wiki       & Dicta test set"
+    genre = {
+        "dictaTestCorpus": DICTA,
+        "blogs": USER_GEN,
+        "critics": USER_GEN,
+        "forums": USER_GEN,
+        "news": NEWS_MAG,
+        "ynet": NEWS_MAG,
+        "bsheva": NEWS_MAG,
+        "yisrael-hayom": NEWS_MAG,
+        "hadrei-haredim": NEWS_MAG,
+        "random_internet": BOOKS,
+        "books": BOOKS,
+        "dont_panic": BOOKS,
+        "wiki": WIKI,
+        "yanshuf": YANSHUF,
+        "govil": OFFICIAL,
+        "kol-briut": OFFICIAL,
+    }
+    docs = Counter()
+    total_docs = 0
+
+    tokens = Counter()
+    total_tokens = 0
+
+    for path in itertools.chain(Path('hebrew_diacritized/modern').iterdir(),
+                                Path('hebrew_diacritized/dictaTestCorpus').iterdir(),
+                                Path('hebrew_diacritized/validation/modern').iterdir(),
+                                Path('hebrew_diacritized/validation/dictaTestCorpus').iterdir()):
+        n_docs = len(list(path.glob('*.txt')))
+        docs[genre[path.name]] += n_docs
+        total_docs += n_docs
+
+        n_tokens = count_hebrew_tokens([str(path)])
+        tokens[genre[path.name]] += n_tokens
+        total_tokens += n_tokens
+
+    print(r"            & Genre      & Sources        & \# Docs & \# Tokens \\")
+    print(r"\midrule")
+    for genre in [DICTA, YANSHUF, BOOKS, OFFICIAL, NEWS_MAG, USER_GEN, WIKI]:
+        print(f'{genre} & {docs[genre]:6,} & {tokens[genre]:10,} \\\\')
+    print(r"\midrule")
+    print(f"            & Total      &                & {total_docs:6,} & {total_tokens:10,} \\\\")
+
+
 if __name__ == '__main__':
-    # tokens = collect_tokens(['tests/test/expected'])
-    # print(len(tokens))
+    # table_2()
+    import train
+    # print(count_hebrew_tokens(['hebrew_diacritized/validation']))
+    # print(count_hebrew_tokens(train.Full.corpus["premodern"]))
+    print(count_hebrew_tokens(train.Full.corpus["automatic"]))
+    # print(count_hebrew_tokens(train.Full.corpus["modern"]))
     # for k, v in Counter(remove_niqqud(str(token)) for token in tokens).items():
     #     print(k, v)
-    print(lsplit_nonhebrew('-חריגים,'))
-    print(rsplit_nonhebrew('-חריגים,'))
-    print(split_nonhebrew('-חריגים,'))

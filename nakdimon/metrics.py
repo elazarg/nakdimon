@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Optional
 from pathlib import Path
 from dataclasses import dataclass
 import numpy as np
@@ -110,11 +110,12 @@ def metric_dec(doc_pack: DocumentPack) -> float:
     )
 
 
-def is_hebrew(token: hebrew.Token) -> bool:
-    return len([c for c in token.items if c.letter in hebrew.HEBREW_LETTERS]) > 1
+vocabulary: Optional[external_apis.MajorityDiacritizer] = None
 
 
 def is_oov(word: str) -> bool:
+    if vocabulary is None:
+        return True
     return vocabulary.is_oov(word)
 
 
@@ -124,7 +125,7 @@ def metric_wor(doc_pack: DocumentPack) -> float:
     for tokens containing at least 2 Hebrew letters.
     """
     return mean_equal((x, y) for x, y in zip(doc_pack.actual.tokens(), doc_pack.expected.tokens())
-                      if is_hebrew(x) and is_oov(str(x)))
+                      if x.is_hebrew() and is_oov(str(x)))
 
 
 def metric_voc(doc_pack: DocumentPack) -> float:
@@ -133,7 +134,7 @@ def metric_voc(doc_pack: DocumentPack) -> float:
     for tokens containing at least 2 Hebrew letters.
     """
     return mean_equal((x, y) for x, y in zip(doc_pack.actual.vocalized_tokens(), doc_pack.expected.vocalized_tokens())
-                      if is_hebrew(x) and is_oov(str(x)))
+                      if x.is_hebrew() and is_oov(str(x)))
 
 
 def token_to_text(token: hebrew.Token) -> str:
@@ -270,21 +271,24 @@ if __name__ == '__main__':
     vocabulary = external_apis.SYSTEMS['MajorityAllNoDicta']
     basepath = Path('tests/dicta/expected')
     all_stats(
-        # 'Snopi',
+        'Snopi',
         # 'Morfix',
         # 'Dicta',
-        'Nakdimon0',
-        'MajorityModern',
+        # 'Nakdimon0',
+        # 'MajorityModern',
         'MajorityAllNoDicta',
     )
 
     vocabulary = external_apis.SYSTEMS['MajorityAllWithDicta']
     basepath = Path('tests/test/expected')
     all_stats(
-        # 'Snopi',
+        'Snopi',
         # 'Morfix',
         # 'Dicta',
-        'Nakdimon',
-        'MajorityModern',
-        'MajorityAllWithDicta',
+        # 'Nakdimon0',
+        # 'Nakdimon',
+        # 'MajorityModern',
+        # 'MajorityAllWithDicta',
     )
+    for word in external_apis.all_oov:
+        print(word)

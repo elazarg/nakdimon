@@ -72,7 +72,7 @@ class ConstantLR(TrainingParams):
 
     def epoch_params(self, data):
         scheduler = tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: self.lr)
-        yield ('mix', 1, scheduler)
+        yield ('premodern', 1, scheduler)
         yield ('modern', 5, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: self.lr))
 
 
@@ -116,7 +116,7 @@ class Batch(TrainingParams):
 
 class FullNoMix(TrainingParams):
     corpus = {
-        'dicta': tuple([
+        'automatic': tuple([
             'hebrew_diacritized/shortstoryproject_predotted',
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
@@ -128,7 +128,7 @@ class FullNoMix(TrainingParams):
 
     def epoch_params(self, data):
         lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
@@ -142,7 +142,7 @@ class FullOrdered(TrainingParams):
             'hebrew_diacritized/pre_modern',
             'hebrew_diacritized/shortstoryproject_predotted',
         ]),
-        'dicta': tuple([
+        'automatic': tuple([
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
         'modern': tuple([
@@ -154,13 +154,13 @@ class FullOrdered(TrainingParams):
     def epoch_params(self, data):
         yield ('rabanit', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
         yield ('pre_modern', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
-        yield ('dicta', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
+        yield ('automatic', 1, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
         yield ('modern', 3, tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 30e-4))
 
 
 class NoPredotted(TrainingParams):
     corpus = {
-        'dicta': tuple([
+        'automatic': tuple([
             'hebrew_diacritized/shortstoryproject_predotted',
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
@@ -172,20 +172,20 @@ class NoPredotted(TrainingParams):
 
     def epoch_params(self, data):
         lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
 
 class FullUpdated(TrainingParams):
     corpus = {
-        'mix': tuple([
+        'premodern': tuple([
             'hebrew_diacritized/poetry',
             'hebrew_diacritized/rabanit',
             'hebrew_diacritized/pre_modern',
             'hebrew_diacritized/shortstoryproject_predotted'
         ]),
-        'dicta': tuple([
+        'automatic': tuple([
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
         'modern': tuple([
@@ -196,9 +196,9 @@ class FullUpdated(TrainingParams):
     }
 
     def epoch_params(self, data):
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        yield ('premodern', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
         lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
@@ -206,9 +206,9 @@ class FullUpdated(TrainingParams):
 class TasteModernFirst(FullUpdated):
     def epoch_params(self, data):
         yield ('modern', 1,  tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: 3e-3))
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        yield ('premodern', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
         lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1-1]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1-1]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1-1]))
 

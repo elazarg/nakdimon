@@ -34,34 +34,33 @@ class NakdimonParams:
     batch_size = 128
     units = 400
     corpus = {
-        'mix': tuple([
+        'premodern': tuple([
             'hebrew_diacritized/poetry',
             'hebrew_diacritized/rabanit',
             'hebrew_diacritized/pre_modern',
             'hebrew_diacritized/shortstoryproject_predotted'
         ]),
-        'dicta': tuple([
+        'automatic': tuple([
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
         'modern': tuple([
             'hebrew_diacritized/modern',
             'hebrew_diacritized/dictaTestCorpus',
-            'hebrew_diacritized/new',
             'hebrew_diacritized/validation'
         ])
     }
 
     validation_rate = 0
 
-    subtraining_rate = {'mix': 1, 'modern': 1}
+    subtraining_rate = {'premodern': 1, 'modern': 1}
 
     def loss(self, y_true, y_pred):
         return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
 
     def epoch_params(self, data):
-        yield ('mix', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        yield ('premodern', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
         lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1]))
 
@@ -92,19 +91,18 @@ class NakdimonParams:
 
 class TrainingParams(NakdimonParams):
     corpus = {
-        'mix': tuple([
+        'premodern': tuple([
             'hebrew_diacritized/poetry',
             'hebrew_diacritized/rabanit',
             'hebrew_diacritized/pre_modern',
             'hebrew_diacritized/shortstoryproject_predotted'
         ]),
-        'dicta': tuple([
+        'automatic': tuple([
             'hebrew_diacritized/shortstoryproject_Dicta',
         ]),
         'modern': tuple([
             'hebrew_diacritized/modern',
             'hebrew_diacritized/dictaTestCorpus',
-            'hebrew_diacritized/new'
         ])
     }
 
@@ -134,9 +132,9 @@ class Transformer(TrainingParams):
 
     def epoch_params(self, data):
         lrs0 = [20e-4, 5e-4]
-        yield ('mix', len(lrs0), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs0[epoch]))
+        yield ('premodern', len(lrs0), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs0[epoch]))
         lrs1 = [10e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-len(lrs0)]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-len(lrs0)]))
         lrs2 = [10e-4] * 6
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs0)-len(lrs1)]))
 
@@ -161,9 +159,9 @@ class TwoLevelLSTM(TrainingParams):
 
     def epoch_params(self, data):
         lrs0 = [3e-4]
-        yield ('mix', 1, schedulers.CircularLearningRate(1e-4, 8e-3, 1e-4, data['mix'][0], self.batch_size))
+        yield ('premodern', 1, schedulers.CircularLearningRate(1e-4, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
         lrs1 = [30e-4, 10e-4]
-        yield ('dicta', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-len(lrs0)]))
+        yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-len(lrs0)]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-len(lrs0)]))
 

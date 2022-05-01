@@ -225,7 +225,7 @@ SYSTEMS = {
     'Dicta': fetch_dicta,
     'Nakdimon': fetch_nakdimon,
 }
-
+all_oov = set()
 
 class MajorityDiacritizer:
     dictionary: dict[str, str]
@@ -249,7 +249,10 @@ class MajorityDiacritizer:
 
     def is_oov(self, word: str) -> bool:
         left, word, right = hebrew.split_nonhebrew(hebrew.remove_niqqud(word))
-        return word not in self.dictionary
+        if word not in self.dictionary:
+            # all_oov.add(word)
+            return True
+        return False
 
     def diacritize_token(self, word: str) -> str:
         left, word, right = hebrew.split_nonhebrew(word)
