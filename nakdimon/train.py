@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 from tensorflow.keras import layers
@@ -166,7 +168,7 @@ class TwoLevelLSTM(TrainingParams):
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-len(lrs0)]))
 
 
-def get_xy(d):
+def get_xy(d: dataset.Data):
     x = d.normalized
     y = {'N': d.niqqud, 'D': d.dagesh, 'S': d.sin}
     return (x, y)
@@ -175,16 +177,20 @@ def get_xy(d):
 def load_data(params: NakdimonParams):
     train_dict = {}
     for stage_name, stage_dataset_filenames in params.corpus.items():
-        train_dict[stage_name] = get_xy(dataset.load_data(tuple(stage_dataset_filenames), maxlen=MAXLEN).shuffle())
+        data = dataset.load_data(tuple(stage_dataset_filenames), maxlen=MAXLEN)
+        data.shuffle()
+        train_dict[stage_name] = get_xy(data)
     return train_dict
 
 
 def load_validation_data():
-    return get_xy(dataset.load_data(tuple([VALIDATION_PATH]), maxlen=MAXLEN).shuffle())
+    data = dataset.load_data(tuple([VALIDATION_PATH]), maxlen=MAXLEN)
+    data.shuffle()
+    return get_xy(data)
 
 
 def ablation_metrics(model):
-    import nakdimon, metrics, hebrew
+    import predict, metrics, hebrew
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
@@ -195,7 +201,7 @@ def ablation_metrics(model):
                 path.name,
                 {
                     'expected': doc,
-                    'actual': metrics.Document('actual', 'Nakdimon', nakdimon.predict(model, hebrew.remove_niqqud(doc.text), maxlen=MAXLEN))
+                    'actual': metrics.Document('actual', 'Nakdimon', predict.predict(model, hebrew.remove_niqqud(doc.text), maxlen=MAXLEN))
                 }
             ))
 
@@ -203,10 +209,10 @@ def ablation_metrics(model):
 
 
 def train(params: NakdimonParams, group, ablation=False):
-    print("Loading data...")
+    logging.debug("Loading data...")
     train_dict = load_data(params)
     validation_data = load_validation_data() if ablation else None
-    print("Creating model...")
+    logging.debug("Creating model...")
     model = params.build_model()
     model.compile(loss=params.loss,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
@@ -260,6 +266,6 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
-if __name__ == '__main__':
+def main(args):
     model = train(Full(), 'Full', ablation=False)
     model.save(f'./models/Full.h5')

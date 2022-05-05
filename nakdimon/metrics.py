@@ -265,7 +265,7 @@ def all_failed() -> None:
             print(f'{doc_pack.source}|{doc_pack.name}| {pre}|{res}|{post} |')
 
 
-if __name__ == '__main__':
+def main():
     external_apis.SYSTEMS.update(external_apis.prepare_majority())
 
     vocabulary = external_apis.SYSTEMS['MajorityAllNoDicta']

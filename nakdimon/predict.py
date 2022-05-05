@@ -40,13 +40,9 @@ def predict(model: tf.Module, text: str, maxlen=10000) -> str:
     return ' '.join(actual).replace('\ufeff', '').replace('  ', ' ').replace(hebrew.RAFE, '')
 
 
-def diacritize_file(input_filename='-', output_filename='-'):
+def main(input_filename='-', output_filename='-'):
     with utils.smart_open(input_filename, 'r', encoding='utf-8') as f:
         text = hebrew.remove_niqqud(f.read())
     text = predict(load_cached_model('final_model/final.h5'), text)
     with utils.smart_open(output_filename, 'w', encoding='utf-8') as f:
         f.write(text)
-
-
-if __name__ == '__main__':
-    diacritize_file('tmp_expected.txt', '-')
