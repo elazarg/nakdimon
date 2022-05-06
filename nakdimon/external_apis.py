@@ -81,6 +81,10 @@ def fetch_snopi(undotted_text: str) -> str:
 @cachier()
 @piecewise(100)
 def fetch_morfix(text: str) -> str:
+    import sys
+    print('Error: Morfix does not allow automatic diacritization! exiting.', file=sys.stderr)
+    exit(1)
+
     url = 'https://nakdan.morfix.co.il/nikud/NikudText'
 
     payload = {

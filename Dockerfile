@@ -6,4 +6,5 @@ COPY nakdimon nakdimon
 COPY final_model models
 COPY tests tests
 WORKDIR /app/nakdimon
-CMD [ "python3", "nakdimon", "-h"]
+CMD [ "python3", "nakdimon", "server"]
+ENTRYPOINT [ "python3" ]

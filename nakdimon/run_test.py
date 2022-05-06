@@ -1,4 +1,5 @@
 import collections
+import logging
 from pathlib import Path
 
 import external_apis
@@ -14,21 +15,25 @@ def diacritize_all(system: str, basepath: str) -> None:
         infile = Path(filename)
         outfile = Path(filename.replace('expected', system))
         if outfile.exists():
+            logging.info(f'{outfile} already exists, skipping')
             return
-        print(outfile)
         outfile.parent.mkdir(parents=True, exist_ok=True)
         with open(infile, 'r', encoding='utf8') as f:
             expected = f.read()
         cleaned = hebrew.remove_niqqud(expected)
         actual = diacritizer(cleaned)
+        logging.debug(f'Writing {outfile}')
         with open(outfile, 'w', encoding='utf8') as f:
             f.write(actual)
+        logging.info(f'Diacritized: {outfile}')
 
+    logging.info(f'Iterating over {basepath}')
     for filename in utils.iterate_files([basepath]):
+        logging.info(f'Diacritizing {filename}')
         try:
             diacritize_this(filename)
         except external_apis.DottingError:
-            print("Failed to dot")
+            logging.warning("Failed to dot")
 
 
 def count_all_ambiguity(basepath: str) -> None:

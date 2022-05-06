@@ -236,8 +236,7 @@ def main(*, test_set: str, systems: list[str]) -> None:
         del external_apis.SYSTEMS['Nakdimon']
     elif test_set == 'tests/new':
         del external_apis.SYSTEMS[external_apis.MAJ_ALL_NO_DICTA]
-    else:
-        assert False
+
     stats = Stats(
         basepath=Path(f'{test_set}/expected'),
         vocabulary=external_apis.SYSTEMS[maj]
