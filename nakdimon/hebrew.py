@@ -84,6 +84,9 @@ class HebrewItem(NamedTuple):
                              sin=self.sin.replace(RAFE, ''),
                              dagesh=vocalize_dagesh(self.letter, self.dagesh))
 
+    def to_text(self) -> str:
+        return str(self).replace(RAFE, '')
+
 
 def items_to_text(items: List[HebrewItem]) -> str:
     return ''.join(str(item) for item in items).replace(RAFE, '')
@@ -255,8 +258,12 @@ class Token:
     def is_hebrew(self) -> bool:
         return len([c for c in self.items if c.letter in HEBREW_LETTERS]) > 1
 
+    def to_text(self) -> str:
+        return str(self).replace(RAFE, '')
 
-def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem], strip_nonhebrew: bool) -> Iterator[HebrewItem]:
+
+def tokenize(char_iterator: Iterator[HebrewItem], strip_nonhebrew: bool) -> list[Token]:
+    result = []
     current = []
     for c in char_iterator:
         if c.letter.isspace() or c.letter == '-':
@@ -264,22 +271,16 @@ def tokenize_into(tokens_list: List[Token], char_iterator: Iterator[HebrewItem],
                 token = Token(tuple(current))
                 if strip_nonhebrew:
                     _, token, _ = token.split_on_hebrew()
-                tokens_list.append(token)
+                result.append(token)
             current = []
         else:
             current.append(c)
-        yield c
     if current:
         token = Token(tuple(current))
         if strip_nonhebrew:
             _, token, _ = token.split_on_hebrew()
-        tokens_list.append(token)
-
-
-def tokenize(iterator: Iterator[HebrewItem], strip_nonhebrew=False) -> List[Token]:
-    tokens = []
-    _ = list(tokenize_into(tokens, iterator, strip_nonhebrew))
-    return tokens
+        result.append(token)
+    return result
 
 
 def collect_wordmap(tokens: Iterable[Token]):
@@ -289,7 +290,7 @@ def collect_wordmap(tokens: Iterable[Token]):
     return word_dict
 
 
-def collect_tokens(paths: Iterable[str]):
+def collect_tokens(paths: Iterable[str]) -> list[Token]:
     return tokenize(itertools.chain.from_iterable(iterate_file(path) for path in utils.iterate_files(paths)),
                     strip_nonhebrew=True)
 

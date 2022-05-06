@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict, Counter
 import re
 import json
@@ -46,7 +47,7 @@ def fix_snopi(dotted_text: str, undotted_text: str) -> str:
 def fetch_snopi(undotted_text: str) -> str:
     # Add bogus continuation in case there's only a single word
     # so Snopi will not decide to answer with single-word-analysis
-    print(repr(undotted_text))
+    logging.debug(repr(undotted_text))
     dummy = False
     if ' ' not in undotted_text:
         dummy = True
@@ -66,11 +67,11 @@ def fetch_snopi(undotted_text: str) -> str:
     r.raise_for_status()
 
     dotted_text = r.text.strip().split('Result')[1][1:-2]
-    print(repr(dotted_text))
+    logging.debug(repr(dotted_text))
     if hebrew.remove_niqqud(dotted_text) != undotted_text:
-        print('Fixing...')
+        logging.debug('Fixing...')
         dotted_text = fix_snopi(dotted_text, undotted_text)
-        print(repr(dotted_text))
+        logging.debug(repr(dotted_text))
     assert hebrew.remove_niqqud(dotted_text) == undotted_text, f'{repr(dotted_text)}\n!=\n{repr(undotted_text)}'
     if dummy:
         dotted_text = dotted_text[:-2]
@@ -224,6 +225,7 @@ SYSTEMS = {
 }
 all_oov = set()
 
+
 class MajorityDiacritizer:
     dictionary: dict[str, str]
 
@@ -231,14 +233,14 @@ class MajorityDiacritizer:
     def update_possibilities(possibilities: defaultdict[str, Counter], train_paths: tuple[str, ...]) -> None:
         import hebrew
         for token in hebrew.collect_tokens(train_paths):
-            word = str(token).replace(hebrew.RAFE, '')
+            word = token.to_text()
             if word:
                 left, word, right = hebrew.split_nonhebrew(word)
                 if word:
                     possibilities[hebrew.remove_niqqud(word)][word] += 1
                     for t in token.items:
                         if hebrew.is_hebrew_letter(t.letter):
-                            possibilities[t.letter][str(t).replace(hebrew.RAFE, '')] += 1
+                            possibilities[t.letter][t.to_text()] += 1
 
     def __init__(self, possibilities: defaultdict[str, Counter]) -> None:
         self.dictionary = {word: options.most_common(1)[0][0]
@@ -257,7 +259,6 @@ class MajorityDiacritizer:
         if word in self.dictionary:
             result = self.dictionary[word]
         else:
-            print(word)
             result = word  # ''.join([self.dictionary.get(letter, '') for letter in word])
         return left + result + right
 
@@ -265,35 +266,38 @@ class MajorityDiacritizer:
         return ' '.join([self.diacritize_token(token) for token in hebrew.remove_niqqud(text).split()])
 
 
+MAJ_MOD = 'MajMod'
+MAJ_ALL_NO_DICTA = 'MajAllNoDicta'
+MAJ_ALL_WITH_DICTA = 'MajAllWithDicta'
+
+
 @cachier()
 def prepare_majority():
+    logging.info('Preparing MajMod...')
     possibilities = defaultdict(Counter)
-    print('Preparing MajorityModern...')
     res = {}
 
     MajorityDiacritizer.update_possibilities(possibilities, tuple([
         'hebrew_diacritized/modern/'
     ]))
-    res['MajorityModern'] = MajorityDiacritizer(possibilities)
+    res[MAJ_MOD] = MajorityDiacritizer(possibilities)
 
-    if True:
-        print('Preparing MajorityAllNoDicta...')
-        MajorityDiacritizer.update_possibilities(possibilities, tuple([
-            'hebrew_diacritized/poetry',
-            'hebrew_diacritized/rabanit',
-            'hebrew_diacritized/pre_modern',
-            'hebrew_diacritized/shortstoryproject_predotted',
-            'hebrew_diacritized/shortstoryproject_Dicta',
-            'hebrew_diacritized/new',
-            'hebrew_diacritized/validation'
-        ]))
-        res['MajorityAllNoDicta'] = MajorityDiacritizer(possibilities)
+    logging.info('Preparing MajAllNoDicta...')
+    MajorityDiacritizer.update_possibilities(possibilities, tuple([
+        'hebrew_diacritized/poetry',
+        'hebrew_diacritized/rabanit',
+        'hebrew_diacritized/pre_modern',
+        'hebrew_diacritized/shortstoryproject_predotted',
+        'hebrew_diacritized/shortstoryproject_Dicta',
+        'hebrew_diacritized/validation'
+    ]))
+    res[MAJ_ALL_NO_DICTA] = MajorityDiacritizer(possibilities)
 
-        print('Preparing MajorityAllWithDicta...')
-        MajorityDiacritizer.update_possibilities(possibilities, ('hebrew_diacritized/dictaTestCorpus',))
-        res['MajorityAllWithDicta'] = MajorityDiacritizer(possibilities)
-    print('Done preparing.')
+    logging.info('Preparing MajAllWithDicta...')
+    MajorityDiacritizer.update_possibilities(possibilities, ('hebrew_diacritized/dictaTestCorpus',))
+    res[MAJ_ALL_WITH_DICTA] = MajorityDiacritizer(possibilities)
 
+    logging.info('Done preparing.')
     return res
 
 
@@ -326,4 +330,3 @@ def fetch_dicta_count_ambiguity(text: str):
 
 if __name__ == '__main__':
     SYSTEMS.update(prepare_majority())
-    print(SYSTEMS['MajorityModern']("אָנוּ חַיִּים בַּמְּצִיאוּת שֶׁל סִכְסוּךְ עָקוֹב מִדם"))

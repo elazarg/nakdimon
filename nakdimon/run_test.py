@@ -47,13 +47,7 @@ def count_all_ambiguity(basepath: str) -> None:
         print(c, file=f)
 
 
-if __name__ == '__main__':
-    external_apis.SYSTEMS.update(external_apis.prepare_majority())
-    diacritize_all('MajorityAllNoDicta', 'tests/dicta/expected')
-    diacritize_all('MajorityAllWithDicta', 'tests/test/expected')
-    diacritize_all('MajorityModern', 'tests/dicta/expected')
-    diacritize_all('MajorityModern', 'tests/test/expected')
-    # diacritize_all('Snopi', 'tests/test/expected')
-    # diacritize_all('Dicta', '../shortstoryproject')
-    # print(diacritize("Nakdimon", 'tmp_expected.txt'))
-    # count_all_ambiguity()
+def main(system: str, test_set: str) -> None:
+    if 'Maj' in system:
+        external_apis.SYSTEMS.update(external_apis.prepare_majority())
+    diacritize_all(system, f'{test_set}/expected')

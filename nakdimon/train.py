@@ -175,22 +175,31 @@ def get_xy(d: dataset.Data):
 
 
 def load_data(params: NakdimonParams):
+    logging.info("Loading training data...")
     train_dict = {}
     for stage_name, stage_dataset_filenames in params.corpus.items():
+        logging.info(f"Loading training data: {stage_name}...")
         data = dataset.load_data(tuple(stage_dataset_filenames), maxlen=MAXLEN)
         data.shuffle()
         train_dict[stage_name] = get_xy(data)
+        logging.info(f"{stage_name} loaded.")
+    logging.info("Training data loaded.")
     return train_dict
 
 
 def load_validation_data():
+    logging.info("Loading validation data...")
     data = dataset.load_data(tuple([VALIDATION_PATH]), maxlen=MAXLEN)
     data.shuffle()
-    return get_xy(data)
+    result = get_xy(data)
+    logging.info("Validation data loaded.")
+    return result
 
 
 def ablation_metrics(model):
-    import predict, metrics, hebrew
+    import predict
+    import metrics
+    import hebrew
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
@@ -208,11 +217,10 @@ def ablation_metrics(model):
     return metrics.metricwise_mean(calculate_metrics(model, VALIDATION_PATH))
 
 
-def train(params: NakdimonParams, group, ablation=False):
-    logging.debug("Loading data...")
+def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
     train_dict = load_data(params)
     validation_data = load_validation_data() if ablation else None
-    logging.debug("Creating model...")
+    logging.info("Creating model...")
     model = params.build_model()
     model.compile(loss=params.loss,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
@@ -228,13 +236,16 @@ def train(params: NakdimonParams, group, ablation=False):
                      group=group,
                      name=params.name,
                      tags=[],
-                     config=config)
+                     config=config,
+                     mode="enabled" if wandb_enabled else "disabled")
 
     model = params.initialize_weights(model)
 
     with run:
         last_epoch = 0
         for phase, (stage, n_epochs, scheduler) in enumerate(params.epoch_params(train_dict)):
+            logging.info(f"Training phase {phase}: {stage}, {n_epochs} epochs.")
+
             training_data = (x, y) = train_dict[stage]
 
             wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
@@ -247,7 +258,7 @@ def train(params: NakdimonParams, group, ablation=False):
             model.fit(x, y, validation_data=validation_data,
                       initial_epoch=last_epoch,
                       epochs=last_epoch + n_epochs,
-                      batch_size=params.batch_size, verbose=2,
+                      batch_size=params.batch_size,  # verbose=2,
                       callbacks=[wandb_callback, scheduler])
             last_epoch += n_epochs
             if ablation:
@@ -266,6 +277,6 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
-def main(args):
-    model = train(Full(), 'Full', ablation=False)
+def main(*, wandb: bool):
+    model = train(Full(), 'Full', ablation=False, wandb_enabled=wandb)
     model.save(f'./models/Full.h5')

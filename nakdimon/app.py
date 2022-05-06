@@ -14,11 +14,11 @@ def diacritize():
         text = flask.request.files.get('text').read().decode('utf-8')
         if not text:
             raise werkzeug.exceptions.BadRequest
-    logging.debug('request:', text)
+    logging.info(f'request: {text}')
     model_name = flask.request.values.get('model_name')
-    logging.debug('model_name:', model_name)
+    logging.info(f'model_name: {model_name}')
     actual = predict.predict(predict.load_cached_model(model_name), text)
-    logging.debug('result:', actual)
+    logging.debug(f'result: {actual}')
     response = flask.make_response(actual, 200)
     response.mimetype = "text/plain"
     return response
