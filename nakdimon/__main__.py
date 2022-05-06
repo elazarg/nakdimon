@@ -35,7 +35,7 @@ def do_server(**kwargs):
 
 if __name__ == '__main__':
 
-    logging.basicConfig(encoding='utf-8', level=logging.INFO, format='%(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
@@ -68,11 +68,11 @@ if __name__ == '__main__':
     parser_daemon.set_defaults(func=do_server)
 
     parser_eval = subparsers.add_parser('results', help='evaluate the results of a test run')
-    parser_eval.add_argument('test_set', choices=available_tests, help='choose test set', default='new')
+    parser_eval.add_argument('--test_set', choices=available_tests, help='choose test set', default='tests/new')
     partial_result, _ = parser.parse_known_args()
     if partial_result.command == 'results':
-        systems = [folder for folder in os.listdir(partial_result.test_set)
-                   if os.path.isdir(f'{partial_result.test_set}/{folder}') and folder != 'expected']
+        test_systems = [folder for folder in os.listdir(partial_result.test_set)
+                        if os.path.isdir(f'{partial_result.test_set}/{folder}') and folder != 'expected']
     parser_eval.add_argument('--systems', choices=test_systems, nargs='+', help='list of systems to evaluate',
                              default=test_systems)
     parser_eval.set_defaults(func=do_metrics)

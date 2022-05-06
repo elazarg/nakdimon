@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Iterator, Optional
 from pathlib import Path
 from dataclasses import dataclass
@@ -232,10 +233,13 @@ def main(*, test_set: str, systems: list[str]) -> None:
     if test_set == 'tests/dicta':
         # Remove systems that depend on the dicta test set for their training
         maj = external_apis.MAJ_ALL_NO_DICTA
-        del external_apis.SYSTEMS[external_apis.MAJ_ALL_WITH_DICTA]
-        del external_apis.SYSTEMS['Nakdimon']
+        if external_apis.MAJ_ALL_WITH_DICTA in systems:
+            del systems[systems.index(external_apis.MAJ_ALL_WITH_DICTA)]
+        if 'Nakdimon' in systems:
+            del systems[systems.index('Nakdimon')]
     elif test_set == 'tests/new':
-        del external_apis.SYSTEMS[external_apis.MAJ_ALL_NO_DICTA]
+        if external_apis.MAJ_ALL_NO_DICTA in systems:
+            del systems[systems.index(external_apis.MAJ_ALL_NO_DICTA)]
 
     stats = Stats(
         basepath=Path(f'{test_set}/expected'),
