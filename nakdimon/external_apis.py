@@ -157,75 +157,29 @@ def fetch_dicta_version() -> str:
     return f'{model_version}, {wordlist_version}'
 
 
-@piecewise(10000)
-def fetch_nakdimon(text: str) -> str:
-    url = 'http://127.0.0.1:5000'
+def make_fetch_nakdimon(path):
+    @piecewise(10000)
+    def fetch_nakdimon(text: str) -> str:
+        url = 'http://127.0.0.1:5000'
 
-    payload = {
-        "text": text,
-        "model_name": 'final_model/final.h5'
-    }
-    headers = {
-    }
+        payload = {
+            "text": text,
+            "model_name": path,
+        }
+        headers = {
+        }
 
-    r = requests.post(url, data=payload, headers=headers)
-    r.raise_for_status()
-    return r.text
-
-
-@piecewise(10000)
-def fetch_nakdimon_no_dicta(text: str) -> str:
-    url = 'http://127.0.0.1:5000'
-
-    payload = {
-        "text": text,
-        "model_name": 'models/without_dicta.h5'
-    }
-    headers = {
-    }
-
-    r = requests.post(url, data=payload, headers=headers)
-    r.raise_for_status()
-    return r.text
-
-
-@piecewise(10000)
-def fetch_nakdimon_fullnew(text: str) -> str:
-    url = 'http://127.0.0.1:5000'
-
-    payload = {
-        "text": text,
-        "model_name": 'models/FullNewCleaned.h5'
-    }
-    headers = {
-    }
-
-    r = requests.post(url, data=payload, headers=headers)
-    r.raise_for_status()
-    return r.text
-
-
-@piecewise(10000)
-def fetch_nakdimon_FinalWithShortStory(text: str) -> str:
-    url = 'http://127.0.0.1:5000'
-
-    payload = {
-        "text": text,
-        "model_name": 'models/FinalWithShortStory.h5'
-    }
-    headers = {
-    }
-
-    r = requests.post(url, data=payload, headers=headers)
-    r.raise_for_status()
-    return r.text
+        r = requests.post(url, data=payload, headers=headers)
+        r.raise_for_status()
+        return r.text
+    return fetch_nakdimon
 
 
 SYSTEMS = {
     'Snopi': fetch_snopi,  # Too slow
     'Morfix': fetch_morfix,  # terms-of-use issue
     'Dicta': fetch_dicta,
-    'Nakdimon': fetch_nakdimon,
+    'Nakdimon': make_fetch_nakdimon('final_model/final.h5'),
 }
 all_oov = set()
 

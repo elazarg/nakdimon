@@ -29,7 +29,6 @@ def do_server(**kwargs):
     import sys
     import pkgutil
     package = pkgutil.get_loader("server")
-    print(package.get_filename())
     os.execv(sys.executable, [sys.executable, package.get_filename()])
 
 
@@ -57,11 +56,13 @@ if __name__ == '__main__':
     parser_test = subparsers.add_parser('run_test', help='diacritize a test set')
     parser_test.add_argument('--test_set', choices=available_tests, help='choose test set', default='tests/new')
     parser_test.add_argument('--system', choices=test_systems, help='diacritization system to use', default='Nakdimon')
+    parser_test.add_argument('--model', help='path to model', default='final_model/final.h5', dest='model_path')
+    parser_test.add_argument('--skip-existing', action='store_true', help='skip existing files')
     parser_test.set_defaults(func=do_run_test)
 
     parser_predict = subparsers.add_parser('predict', help='diacritize a text file')
-    parser_predict.add_argument('input', type=str, help='input file')
-    parser_predict.add_argument('output', type=str, help='output file')
+    parser_predict.add_argument('input', help='input file')
+    parser_predict.add_argument('output', help='output file')
     parser_predict.set_defaults(func=do_predict)
 
     parser_daemon = subparsers.add_parser('server', help='run Nakdimon server as a daemon')

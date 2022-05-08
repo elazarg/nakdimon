@@ -1,23 +1,36 @@
 from __future__ import annotations
 import collections
 import logging
+import sys
 from pathlib import Path
+
+import requests
 
 import external_apis
 import utils
-
 import hebrew
 
 
-def diacritize_all(system: str, basepath: str) -> None:
-    diacritizer = external_apis.SYSTEMS[system]
+def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: str) -> None:
+    assert system in external_apis.SYSTEMS
+    if system == 'Nakdimon':
+        path = Path(model_path)
+        assert path.suffix == '.h5', f"Expected a path to a h5 file, got {path.suffix}"
+        assert path.is_file(), "Expected a path to a h5 file"
+        diacritizer = external_apis.make_fetch_nakdimon(model_path)
+        system = path.stem
+    else:
+        diacritizer = external_apis.SYSTEMS[system]
 
     def diacritize_this(filename: str) -> None:
         infile = Path(filename)
         outfile = Path(filename.replace('expected', system))
         if outfile.exists():
-            logging.info(f'{outfile} already exists, skipping')
-            return
+            if skip_existing:
+                logging.info(f'{outfile} already exists, skipping')
+                return
+            else:
+                outfile.unlink()
         outfile.parent.mkdir(parents=True, exist_ok=True)
         with open(infile, 'r', encoding='utf8') as f:
             expected = f.read()
@@ -53,7 +66,13 @@ def count_all_ambiguity(basepath: str) -> None:
         print(c, file=f)
 
 
-def main(system: str, test_set: str) -> None:
+def main(system: str, test_set: str, skip_existing: bool, model_path: str) -> None:
     if 'Maj' in system:
         external_apis.SYSTEMS.update(external_apis.prepare_majority())
-    diacritize_all(system, f'{test_set}/expected')
+    try:
+        diacritize_all(system, f'{test_set}/expected', skip_existing, model_path)
+    except requests.exceptions.ConnectionError as ex:
+        logging.error(str(ex))
+        if system == 'Nakdimon':
+            print("Error: Could not connect to Nakdimon. Make sure the Nakdimon server is running.", file=sys.stderr)
+        exit(1)
