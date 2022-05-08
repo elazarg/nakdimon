@@ -17,7 +17,7 @@ def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: 
         path = Path(model_path)
         assert path.suffix == '.h5', f"Expected a path to a h5 file, got {path.suffix}"
         assert path.is_file(), "Expected a path to a h5 file"
-        diacritizer = external_apis.make_fetch_nakdimon(model_path)
+        diacritizer = external_apis.make_nakdimon_no_server(model_path)
         system = path.stem
     else:
         diacritizer = external_apis.SYSTEMS[system]

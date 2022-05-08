@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 
 import tensorflow as tf
@@ -7,14 +8,14 @@ import dataset
 import hebrew
 
 
-# tf.config.set_visible_devices([], 'GPU')
+if tf.config.set_visible_devices([], 'GPU'):
+    logging.warning('No GPU available.')
+
 
 @lru_cache()
 def load_cached_model(m):
     model = tf.keras.models.load_model(m, custom_objects={'loss': None})
     return model
-
-load_model = tf.keras.models.load_model
 
 
 def merge_unconditional(texts, tnss, nss, dss, sss):
@@ -32,7 +33,13 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
     return res
 
 
-def predict(model: tf.Module, text: str, maxlen=10000) -> str:
+def predict(model_or_model_path: tf.Module, text: str, maxlen=10000) -> str:
+    if isinstance(model_or_model_path, str):
+        model = load_cached_model(model_or_model_path)
+    elif isinstance(model_or_model_path, tf.Module):
+        model = model_or_model_path
+    else:
+        raise TypeError(f'Expected str or tf.Module, got {type(model_or_model_path)}')
     data = dataset.Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
     prediction = model.predict(data.normalized)
     [actual_niqqud, actual_dagesh, actual_sin] = [dataset.from_categorical(prediction[0]), dataset.from_categorical(prediction[1]), dataset.from_categorical(prediction[2])]
@@ -40,9 +47,9 @@ def predict(model: tf.Module, text: str, maxlen=10000) -> str:
     return ' '.join(actual).replace('\ufeff', '').replace('  ', ' ').replace(hebrew.RAFE, '')
 
 
-def main(input_filename='-', output_filename='-'):
-    with utils.smart_open(input_filename, 'r', encoding='utf-8') as f:
+def main(input_path='-', output_path='-'):
+    with utils.smart_open(input_path, 'r', encoding='utf-8') as f:
         text = hebrew.remove_niqqud(f.read())
-    text = predict(load_cached_model('final_model/final.h5'), text)
-    with utils.smart_open(output_filename, 'w', encoding='utf-8') as f:
+    text = predict(load_cached_model('models/Nakdimon.h5'), text)
+    with utils.smart_open(output_path, 'w', encoding='utf-8') as f:
         f.write(text)

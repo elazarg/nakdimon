@@ -6,13 +6,18 @@ FROM tensorflow/tensorflow:latest-gpu
 RUN pip install --upgrade pip
 
 WORKDIR /app
+COPY README.md README.md
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 COPY hebrew_diacritized hebrew_diacritized
 COPY tests tests
-COPY final_model final_model
+COPY models models
 COPY nakdimon nakdimon
 
-CMD nohup python nakdimon server &
-ENTRYPOINT bash
+RUN chown -R 1000:1000 .
+RUN chmod -R 755 .
+
+#RUN nohup python nakdimon server &
+
+#ENTRYPOINT ["python", "nakdimon"]

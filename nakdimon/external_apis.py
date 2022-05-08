@@ -7,7 +7,6 @@ import json
 from functools import wraps
 
 import requests
-from cachier import cachier
 
 from hebrew import Niqqud
 import hebrew
@@ -42,7 +41,6 @@ def fix_snopi(dotted_text: str, undotted_text: str) -> str:
     return hebrew.items_to_text(items)
 
 
-@cachier()
 @piecewise(75)  # estimated maximum for reasonable time
 def fetch_snopi(undotted_text: str) -> str:
     # Add bogus continuation in case there's only a single word
@@ -78,7 +76,6 @@ def fetch_snopi(undotted_text: str) -> str:
     return dotted_text
 
 
-@cachier()
 @piecewise(100)
 def fetch_morfix(text: str) -> str:
     import sys
@@ -99,7 +96,6 @@ def fetch_morfix(text: str) -> str:
     return json.loads(r.json()['nikud'])['OutputText']
 
 
-@cachier()
 @piecewise(10000)
 def fetch_dicta(text: str) -> str:
     text = '\n'.join(line for line in text.split('\n') if not line.startswith('https') and not line.startswith('#')).strip()
@@ -175,11 +171,20 @@ def make_fetch_nakdimon(path):
     return fetch_nakdimon
 
 
+def make_nakdimon_no_server(path):
+    import predict
+
+    def run_nakdimon(text: str) -> str:
+        return predict.predict(path, text)
+
+    return run_nakdimon
+
+
 SYSTEMS = {
     'Snopi': fetch_snopi,  # Too slow
     'Morfix': fetch_morfix,  # terms-of-use issue
     'Dicta': fetch_dicta,
-    'Nakdimon': make_fetch_nakdimon('final_model/final.h5'),
+    'Nakdimon': make_nakdimon_no_server('models/Nakdimon.h5'),
 }
 all_oov = set()
 
@@ -229,7 +234,6 @@ MAJ_ALL_NO_DICTA = 'MajAllNoDicta'
 MAJ_ALL_WITH_DICTA = 'MajAllWithDicta'
 
 
-@cachier()
 def prepare_majority():
     logging.info('Preparing MajMod...')
     possibilities = defaultdict(Counter)
@@ -279,11 +283,6 @@ def fetch_dicta_count_ambiguity(text: str):
     r = requests.post(url, json=payload, headers=headers)
     r.raise_for_status()
     return [len(set(token['options'])) for token in r.json() if not token['sep']]
-
-# fetch_snopi.clear_cache()
-# fetch_nakdimon_fullnew.clear_cache()
-# fetch_dicta.clear_cache()
-# prepare_majority.clear_cache()
 
 
 if __name__ == '__main__':

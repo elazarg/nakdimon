@@ -1,8 +1,6 @@
-import keras
 import tensorflow as tf
 
-import train
-from train import TrainingParams, train_ablation
+from train import TrainingParams
 import schedulers
 
 
@@ -97,7 +95,7 @@ class Quick(TrainingParams):
 class Chunk(TrainingParams):
     def __init__(self, maxlen):
         super().__init__()
-        self.maxlen = maxlen
+        self.maxlen = int(maxlen)
 
     @property
     def name(self):
@@ -107,7 +105,7 @@ class Chunk(TrainingParams):
 class Batch(TrainingParams):
     def __init__(self, batch_size):
         super().__init__()
-        self.batch_size = batch_size
+        self.batch_size = int(batch_size)
 
     @property
     def name(self):
@@ -211,13 +209,3 @@ class TasteModernFirst(FullUpdated):
         yield ('automatic', len(lrs1), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs1[epoch-1-1]))
         lrs2 = [10e-4, 10e-4, 3e-4]
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-1-1]))
-
-
-if __name__ == '__main__':
-    # units = 400
-    print(train.Full().build_model().count_params())
-    # for cls in [train.TwoLevelLSTM]:
-    #     for i in range(1):
-    #         print(cls(units).build_model().count_params())
-    #         train_ablation(cls(units), group=f"{cls.__name__}:2022")
-

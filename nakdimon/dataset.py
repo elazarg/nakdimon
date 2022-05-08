@@ -3,8 +3,6 @@ from __future__ import annotations
 import random
 import numpy as np
 
-from cachier import cachier
-
 import hebrew
 import utils
 
@@ -128,7 +126,6 @@ def read_corpora(base_paths) -> tuple[tuple[str, list[hebrew.HebrewItem]], ...]:
     return tuple([(filename, list(hebrew.iterate_file(filename))) for filename in utils.iterate_files(base_paths)])
 
 
-@cachier()
 def load_data(base_paths, maxlen: int) -> Data:
     corpora = read_corpora(base_paths)
     corpus = [(filename, Data.from_text(heb_items, maxlen)) for (filename, heb_items) in corpora]
@@ -145,5 +142,3 @@ if __name__ == '__main__':
     # print(res)
     print_tables()
     print(letters_table.to_ids(["שלום"]))
-
-# load_data.clear_cache()

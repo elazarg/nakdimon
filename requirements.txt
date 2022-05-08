@@ -1,4 +1,3 @@
-cachier
 numpy==1.22.3
 requests==2.27.1
 requests-oauthlib==1.3.1

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Optional
 import logging
 
 import numpy as np
@@ -14,7 +15,7 @@ import schedulers
 
 import transformer
 from pathlib import Path
-assert tf.config.list_physical_devices('GPU')
+# assert tf.config.list_physical_devices('GPU')
 
 VALIDATION_PATH = 'hebrew_diacritized/validation/modern'
 MAXLEN = 80
@@ -278,6 +279,11 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
-def main(*, wandb: bool):
-    model = train(Full(), 'Full', ablation=False, wandb_enabled=wandb)
-    model.save(f'./models/Full.h5')
+def main(*, model_path: str, wandb: bool, ablation_name: Optional[str]):
+    if ablation_name is not None:
+        import ablations
+        params = vars(ablations)[ablation_name]()
+        model = train(params, ablation_name, ablation=False, wandb_enabled=wandb)
+    else:
+        model = train(Full(), 'Full', ablation=False, wandb_enabled=wandb)
+    model.save(model_path)

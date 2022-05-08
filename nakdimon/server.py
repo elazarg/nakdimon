@@ -26,9 +26,9 @@ def diacritize():
 
 
 def main():
-    logging.info("Loading final_model/final.h5")
+    logging.info("Loading models/Nakdimon.h5")
     try:
-        predict.predict(predict.load_cached_model('final_model/final.h5'), "שלום")
+        predict.predict(predict.load_cached_model('models/Nakdimon.h5'), "שלום")
         logging.info("Done loading.")
     except OSError:
         logging.warning("Could not load default model")
