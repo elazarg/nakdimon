@@ -14,5 +14,5 @@ COPY tests tests
 COPY final_model final_model
 COPY nakdimon nakdimon
 
-#CMD ["python", "nakdimon", "server"]
-ENTRYPOINT ["python", "nakdimon", "results"]
+CMD nohup python nakdimon server &
+ENTRYPOINT bash

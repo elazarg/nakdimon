@@ -204,7 +204,7 @@ def ablation_metrics(model):
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
-            print(path, ' ' * 30, end='\r', flush=True)
+            logging.debug(path)
             doc = metrics.read_document('expected', path)
             yield metrics.all_metrics(metrics.DocumentPack(
                 path.parent.name,
