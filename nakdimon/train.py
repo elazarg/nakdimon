@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import Optional
+import logging
+
 import numpy as np
 
 from tensorflow.keras import layers
@@ -11,7 +15,7 @@ import schedulers
 
 import transformer
 from pathlib import Path
-assert tf.config.list_physical_devices('GPU')
+# assert tf.config.list_physical_devices('GPU')
 
 VALIDATION_PATH = 'hebrew_diacritized/validation/modern'
 MAXLEN = 80
@@ -166,47 +170,59 @@ class TwoLevelLSTM(TrainingParams):
         yield ('modern', len(lrs2), tf.keras.callbacks.LearningRateScheduler(lambda epoch, lr: lrs2[epoch-len(lrs1)-len(lrs0)]))
 
 
-def get_xy(d):
+def get_xy(d: dataset.Data):
     x = d.normalized
     y = {'N': d.niqqud, 'D': d.dagesh, 'S': d.sin}
     return (x, y)
 
 
 def load_data(params: NakdimonParams):
+    logging.info("Loading training data...")
     train_dict = {}
     for stage_name, stage_dataset_filenames in params.corpus.items():
-        train_dict[stage_name] = get_xy(dataset.load_data(tuple(stage_dataset_filenames), maxlen=MAXLEN).shuffle())
+        logging.info(f"Loading training data: {stage_name}...")
+        data = dataset.load_data(tuple(stage_dataset_filenames), maxlen=MAXLEN)
+        data.shuffle()
+        train_dict[stage_name] = get_xy(data)
+        logging.info(f"{stage_name} loaded.")
+    logging.info("Training data loaded.")
     return train_dict
 
 
 def load_validation_data():
-    return get_xy(dataset.load_data(tuple([VALIDATION_PATH]), maxlen=MAXLEN).shuffle())
+    logging.info("Loading validation data...")
+    data = dataset.load_data(tuple([VALIDATION_PATH]), maxlen=MAXLEN)
+    data.shuffle()
+    result = get_xy(data)
+    logging.info("Validation data loaded.")
+    return result
 
 
 def ablation_metrics(model):
-    import nakdimon, metrics, hebrew
+    import predict
+    import metrics
+    import hebrew
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
-            print(path, ' ' * 30, end='\r', flush=True)
+            logging.debug(path)
             doc = metrics.read_document('expected', path)
             yield metrics.all_metrics(metrics.DocumentPack(
                 path.parent.name,
                 path.name,
                 {
                     'expected': doc,
-                    'actual': metrics.Document('actual', 'Nakdimon', nakdimon.predict(model, hebrew.remove_niqqud(doc.text), maxlen=MAXLEN))
+                    'actual': metrics.Document('actual', 'Nakdimon', predict.predict(model, hebrew.remove_niqqud(doc.text), maxlen=MAXLEN))
                 }
             ))
 
     return metrics.metricwise_mean(calculate_metrics(model, VALIDATION_PATH))
 
 
-def train(params: NakdimonParams, group, ablation=False):
-    print("Loading data...")
+def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
     train_dict = load_data(params)
     validation_data = load_validation_data() if ablation else None
-    print("Creating model...")
+    logging.info("Creating model...")
     model = params.build_model()
     model.compile(loss=params.loss,
                   optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
@@ -222,13 +238,16 @@ def train(params: NakdimonParams, group, ablation=False):
                      group=group,
                      name=params.name,
                      tags=[],
-                     config=config)
+                     config=config,
+                     mode="enabled" if wandb_enabled else "disabled")
 
     model = params.initialize_weights(model)
 
     with run:
         last_epoch = 0
         for phase, (stage, n_epochs, scheduler) in enumerate(params.epoch_params(train_dict)):
+            logging.info(f"Training phase {phase}: {stage}, {n_epochs} epochs.")
+
             training_data = (x, y) = train_dict[stage]
 
             wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
@@ -241,7 +260,7 @@ def train(params: NakdimonParams, group, ablation=False):
             model.fit(x, y, validation_data=validation_data,
                       initial_epoch=last_epoch,
                       epochs=last_epoch + n_epochs,
-                      batch_size=params.batch_size, verbose=2,
+                      batch_size=params.batch_size,  # verbose=2,
                       callbacks=[wandb_callback, scheduler])
             last_epoch += n_epochs
             if ablation:
@@ -260,6 +279,11 @@ class Full(NakdimonParams):
     validation_rate = 0
 
 
-if __name__ == '__main__':
-    model = train(Full(), 'Full', ablation=False)
-    model.save(f'./models/Full.h5')
+def main(*, model_path: str, wandb: bool, ablation_name: Optional[str]):
+    if ablation_name is not None:
+        import ablations
+        params = vars(ablations)[ablation_name]()
+        model = train(params, ablation_name, ablation=False, wandb_enabled=wandb)
+    else:
+        model = train(Full(), 'Full', ablation=False, wandb_enabled=wandb)
+    model.save(model_path)

@@ -1,34 +1,53 @@
+from __future__ import annotations
 import collections
+import logging
+import sys
 from pathlib import Path
+
+import requests
 
 import external_apis
 import utils
-
 import hebrew
 
 
-def diacritize_all(system: str, basepath: str) -> None:
-    diacritizer = external_apis.SYSTEMS[system]
+def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: str) -> None:
+    assert system in external_apis.SYSTEMS
+    if system == 'Nakdimon':
+        path = Path(model_path)
+        assert path.suffix == '.h5', f"Expected a path to a h5 file, got {path.suffix}"
+        assert path.is_file(), "Expected a path to a h5 file"
+        diacritizer = external_apis.make_nakdimon_no_server(model_path)
+        system = path.stem
+    else:
+        diacritizer = external_apis.SYSTEMS[system]
 
     def diacritize_this(filename: str) -> None:
         infile = Path(filename)
         outfile = Path(filename.replace('expected', system))
         if outfile.exists():
-            return
-        print(outfile)
+            if skip_existing:
+                logging.info(f'{outfile} already exists, skipping')
+                return
+            else:
+                outfile.unlink()
         outfile.parent.mkdir(parents=True, exist_ok=True)
         with open(infile, 'r', encoding='utf8') as f:
             expected = f.read()
         cleaned = hebrew.remove_niqqud(expected)
         actual = diacritizer(cleaned)
+        logging.debug(f'Writing {outfile}')
         with open(outfile, 'w', encoding='utf8') as f:
             f.write(actual)
+        logging.info(f'Diacritized: {outfile}')
 
+    logging.info(f'Iterating over {basepath}')
     for filename in utils.iterate_files([basepath]):
+        logging.info(f'Diacritizing {filename}')
         try:
             diacritize_this(filename)
         except external_apis.DottingError:
-            print("Failed to dot")
+            logging.warning("Failed to dot")
 
 
 def count_all_ambiguity(basepath: str) -> None:
@@ -47,13 +66,13 @@ def count_all_ambiguity(basepath: str) -> None:
         print(c, file=f)
 
 
-if __name__ == '__main__':
-    external_apis.SYSTEMS.update(external_apis.prepare_majority())
-    diacritize_all('MajorityAllNoDicta', 'tests/dicta/expected')
-    diacritize_all('MajorityAllWithDicta', 'tests/test/expected')
-    diacritize_all('MajorityModern', 'tests/dicta/expected')
-    diacritize_all('MajorityModern', 'tests/test/expected')
-    # diacritize_all('Snopi', 'tests/test/expected')
-    # diacritize_all('Dicta', '../shortstoryproject')
-    # print(diacritize("Nakdimon", 'tmp_expected.txt'))
-    # count_all_ambiguity()
+def main(system: str, test_set: str, skip_existing: bool, model_path: str) -> None:
+    if 'Maj' in system:
+        external_apis.SYSTEMS.update(external_apis.prepare_majority())
+    try:
+        diacritize_all(system, f'{test_set}/expected', skip_existing, model_path)
+    except requests.exceptions.ConnectionError as ex:
+        logging.error(str(ex))
+        if system == 'Nakdimon':
+            print("Error: Could not connect to Nakdimon. Make sure the Nakdimon server is running.", file=sys.stderr)
+        exit(1)
