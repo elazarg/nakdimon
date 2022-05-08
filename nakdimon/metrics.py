@@ -2,7 +2,9 @@ from __future__ import annotations
 from typing import Iterator, Optional
 from pathlib import Path
 from dataclasses import dataclass
+
 import numpy as np
+import prettytable as pt
 
 import external_apis
 import hebrew
@@ -181,6 +183,7 @@ def format_latex(system, results) -> None:
           .replace('%', ''))
 
 
+
 def adapt_morfix(expected_filename: str) -> None:
     with open(expected_filename, encoding='utf8') as f:
         expected = list(hebrew.iterate_dotted_text(f.read()))
@@ -245,6 +248,10 @@ def main(*, test_set: str, systems: list[str]) -> None:
         basepath=Path(f'{test_set}/expected'),
         vocabulary=external_apis.SYSTEMS[maj]
     )
+
+    table = pt.PrettyTable()
+    table.field_names = ['system', 'DEC', 'CHA', 'WOR', 'VOC', 'WOR_OOV', 'VOC_OOV']
     for system in systems:
-        results = stats.macro_average(system)
-        format_latex(system, results)
+        results = {k: f'{v:.2%}' for k, v in stats.macro_average(system).items()}
+        table.add_row([system, results['dec'], results["cha"], results["wor"], results["voc"], results["wor_oov"], results["voc_oov"]])
+    print(table)
