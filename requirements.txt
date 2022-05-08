@@ -6,3 +6,4 @@ keras==2.8.0
 tensorflowjs==3.15.0
 tensorflow==2.8.0
 wandb==0.12.16
+prettytable==3.3.0

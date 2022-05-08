@@ -18,6 +18,5 @@ COPY nakdimon nakdimon
 RUN chown -R 1000:1000 .
 RUN chmod -R 755 .
 
-#RUN nohup python nakdimon server &
-
-#ENTRYPOINT ["python", "nakdimon"]
+CMD python nakdimon run_test \
+ && python nakdimon results --systems MajAllWithDicta Snopi Morfix Dicta Nakdimon
