@@ -1,3 +1,9 @@
+# Nakdimon: a simple Hebrew diacritizer
+
+Repository for the paper "Restoring Hebrew Diacritics Without a Dictionary" by Elazar Gershuni and Yuval Pinter.
+
+Demo: http://www.nakdimon.org/
+
 ## Running docker container
 ```
 $ docker run --rm --gpus all --user 1000:1000 -it nakdimon-gpu
