@@ -1,9 +1,3 @@
-# Nakdimon: a simple Hebrew diacritizer
-
-Repository for the paper "Restoring Hebrew Diacritics Without a Dictionary" by Elazar Gershuni and Yuval Pinter.
-
-Demo: http://www.nakdimon.org/
-
 ## Running docker container
 ```
 $ docker run --rm --gpus all --user 1000:1000 -it nakdimon-gpu
@@ -58,3 +52,14 @@ See the file `ablation.py` for the list of available ablation parameters.
   The results of `python nakdimon run_test` are stored in sibling folder, named after the model.
 * `models` contains the trained model.
 * `nakdimon` holds the source code.
+
+## Citation
+(until NAACL 2022 prceedings are available):
+```
+@article{gershuni2021restoring,
+  title={Restoring Hebrew Diacritics Without a Dictionary},
+  author={Gershuni, Elazar and Pinter, Yuval},
+  journal={arXiv preprint arXiv:2105.05209},
+  year={2021}
+}
+```
