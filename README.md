@@ -4,9 +4,15 @@ Repository for the paper [Restoring Hebrew Diacritics Without a Dictionary](http
 
 Demo: https://nakdimon.org/
 
-## Running docker container
+## Building and running docker container
+Build the docker container:
 ```
-$ docker run --rm --gpus all --user 1000:1000 -it nakdimon-gpu
+$ docker build -t nakdimon .
+```
+
+Run the docker container:
+```
+$ docker run --rm --gpus all --user 1000:1000 -it nakdimon /bin/bash
 ```
 
 The `--gpus all` flag is required to run the container with GPU support.
