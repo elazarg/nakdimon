@@ -1,6 +1,6 @@
 # Nakdimon: a simple Hebrew diacritizer
 
-Repository for the paper "Restoring Hebrew Diacritics Without a Dictionary" by Elazar Gershuni and Yuval Pinter.
+Repository for the paper [Restoring Hebrew Diacritics Without a Dictionary](https://arxiv.org/abs/2105.05209) by Elazar Gershuni and Yuval Pinter.
 
 Demo: http://www.nakdimon.org/
 
