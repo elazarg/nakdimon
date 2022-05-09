@@ -2,7 +2,7 @@
 
 Repository for the paper [Restoring Hebrew Diacritics Without a Dictionary](https://arxiv.org/abs/2105.05209) by Elazar Gershuni and Yuval Pinter.
 
-Demo: http://www.nakdimon.org/
+Demo: https://nakdimon.org/
 
 ## Running docker container
 ```
