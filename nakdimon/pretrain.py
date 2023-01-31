@@ -103,7 +103,7 @@ def load_plaintext(filename, maxlen):
 def pretrain():
     model = self_supervized_model(400)
     model.compile(loss='sparse_categorical_crossentropy',
-                  optimizer=keras.optimizers.Adam(learning_rate=8e-5),
+                  optimizer=keras.optimizers.legacy.Adam(learning_rate=8e-5),
                   metrics='accuracy')
 
     config = {

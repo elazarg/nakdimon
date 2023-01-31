@@ -225,7 +225,7 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
     logging.info("Creating model...")
     model = params.build_model()
     model.compile(loss=params.loss,
-                  optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+                  optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
                   metrics=accuracy)
 
     config = {
