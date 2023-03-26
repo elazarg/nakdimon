@@ -66,12 +66,13 @@ See the file `ablation.py` for the list of available ablation parameters.
 * `nakdimon` holds the source code.
 
 ## Citation
-(until NAACL 2022 prceedings are available):
 ```
-@article{gershuni2021restoring,
+@inproceedings{gershuni2022restoring,
   title={Restoring Hebrew Diacritics Without a Dictionary},
   author={Gershuni, Elazar and Pinter, Yuval},
-  journal={arXiv preprint arXiv:2105.05209},
-  year={2021}
+  booktitle={Findings of the Association for Computational Linguistics: NAACL 2022},
+  pages={1010--1018},
+  year={2022}
 }
 ```
+> Gershuni, Elazar, and Yuval Pinter. "Restoring Hebrew Diacritics Without a Dictionary." Findings of the Association for Computational Linguistics: NAACL 2022. 2022.
