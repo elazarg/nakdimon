@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:latest-gpu
+FROM tensorflow/tensorflow:2.11.1-gpu
 
 #ENV VIRTUAL_ENV=/opt/venv
 #RUN python -m venv $VIRTUAL_ENV
