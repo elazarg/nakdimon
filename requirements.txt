@@ -5,5 +5,5 @@ Flask==2.3.2
 keras==2.11.0
 tensorflowjs==4.2.0
 tensorflow==2.11.1
-wandb==0.13.9
+wandb==0.17.0
 prettytable==3.6.0
