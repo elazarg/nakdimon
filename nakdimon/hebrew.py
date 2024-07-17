@@ -6,7 +6,7 @@ from typing import NamedTuple, Iterator, Iterable, List, Tuple
 from functools import lru_cache
 import re
 
-import utils
+from nakdimon import utils
 
 
 # "rafe" denotes a letter to which it would have been valid to add a diacritic of some category

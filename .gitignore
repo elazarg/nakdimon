@@ -9,3 +9,5 @@ models
 final_model
 wandb
 cert
+venv/
+nakdimon.egg*

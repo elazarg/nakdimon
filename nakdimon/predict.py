@@ -3,9 +3,7 @@ from functools import lru_cache
 
 import tensorflow as tf
 
-import utils
-import dataset
-import hebrew
+from nakdimon import utils, dataset, hebrew
 
 
 if tf.config.set_visible_devices([], 'GPU'):
