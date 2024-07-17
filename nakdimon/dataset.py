@@ -3,8 +3,8 @@ from __future__ import annotations
 import random
 import numpy as np
 
-import hebrew
-import utils
+from nakdimon import hebrew, utils
+
 
 
 class CharacterTable:
