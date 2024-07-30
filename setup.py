@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "numpy==1.24.1",
-        "tensorflow==2.13.0",
+        "tensorflow==2.12.1",
         "wandb==0.17.0"
     ],
 )
