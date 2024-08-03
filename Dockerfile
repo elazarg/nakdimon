@@ -9,6 +9,7 @@ WORKDIR /app
 ENV PYTHONPATH=/app
 
 COPY README.md README.md
+COPY pyproject.toml pyproject.toml
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
