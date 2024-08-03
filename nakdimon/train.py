@@ -12,6 +12,7 @@ from nakdimon import dataset
 from nakdimon.dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
 from nakdimon import schedulers
 from nakdimon import transformer
+from nakdimon.config import MODELS_DIR
 
 # assert tf.config.list_physical_devices('GPU')
 
@@ -270,7 +271,7 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
 
 def train_ablation(params, group):
     model = train(params, group, ablation=True)
-    model.save(f'./models/ablations/{params.name}.h5')
+    model.save(f'./{MODELS_DIR}/ablations/{params.name}.h5')
 
 
 class Full(NakdimonParams):

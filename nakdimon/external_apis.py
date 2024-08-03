@@ -10,6 +10,7 @@ import requests
 
 from nakdimon.hebrew import Niqqud
 from nakdimon import hebrew
+from nakdimon.config import MAIN_MODEL
 
 
 class DottingError(RuntimeError):
@@ -184,7 +185,7 @@ SYSTEMS = {
     'Snopi': fetch_snopi,  # Too slow
     'Morfix': fetch_morfix,  # terms-of-use issue
     'Dicta': fetch_dicta,
-    'Nakdimon': make_nakdimon_no_server('models/Nakdimon.h5'),
+    'Nakdimon': make_nakdimon_no_server(MAIN_MODEL),
 }
 all_oov = set()
 

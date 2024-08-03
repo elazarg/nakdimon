@@ -9,9 +9,9 @@ from nakdimon import utils
 from nakdimon import hebrew
 from nakdimon.train import TrainingParams
 from nakdimon import metrics
+from nakdimon.config import MODELS_DIR
 
-
-pretrain_path = f'./models/wiki'
+pretrain_path = f'{MODELS_DIR}/wiki'
 model_name = pretrain_path + 'pretrain.h5'
 
 
@@ -138,7 +138,7 @@ def pretrain():
 def train_ablation(params):
     from train import train
     model = train(params)
-    model.save(f'./models/ablations/{params.name}.h5')
+    model.save(f'./{MODELS_DIR}/ablations/{params.name}.h5')
 
 
 if __name__ == '__main__':
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         import ablations
         tf.config.set_visible_devices([], 'GPU')
         model_name = 'PretrainedModernOnly'
-        model = tf.keras.models.load_model(f'models/ablations/{model_name}.h5',
+        model = tf.keras.models.load_model(f'{MODELS_DIR}/ablations/{model_name}.h5',
                                            custom_objects={'loss': TrainingParams().loss})
         print(model_name, *metrics.metricwise_mean(ablations.calculate_metrics(model)).values(), sep=', ')
 

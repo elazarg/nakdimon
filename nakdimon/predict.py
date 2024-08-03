@@ -1,17 +1,21 @@
 import logging
+import pathlib
 from functools import lru_cache
 
 import tensorflow as tf
 
 from nakdimon import utils, dataset, hebrew
-
+from nakdimon.config import MAIN_MODEL
 
 if tf.config.set_visible_devices([], 'GPU'):
     logging.warning('No GPU available.')
 
 
 @lru_cache()
-def load_cached_model(m):
+def load_cached_model(m: pathlib.Path | str) -> tf.Module:
+    if isinstance(m, str):
+        return load_cached_model(pathlib.Path(m))
+    assert isinstance(m, pathlib.Path)
     model = tf.keras.models.load_model(m, custom_objects={'loss': None})
     return model
 
@@ -31,13 +35,12 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
     return res
 
 
-def predict(text: str, model_or_model_path: tf.Module|str = 'models/Nakdimon.h5', maxlen=10000) -> str:
-    if isinstance(model_or_model_path, str):
-        model = load_cached_model(model_or_model_path)
-    elif isinstance(model_or_model_path, tf.Module):
-        model = model_or_model_path
-    else:
+def predict(text: str, model_or_model_path: tf.Module | str = MAIN_MODEL, maxlen=10000) -> str:
+    if isinstance(model_or_model_path, (pathlib.Path, str)):
+        model_or_model_path = load_cached_model(model_or_model_path)
+    if not isinstance(model_or_model_path, tf.Module):
         raise TypeError(f'Expected str or tf.Module, got {type(model_or_model_path)}')
+    model = model_or_model_path
     data = dataset.Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
     prediction = model.predict(data.normalized)
     [actual_niqqud, actual_dagesh, actual_sin] = [dataset.from_categorical(prediction[0]), dataset.from_categorical(prediction[1]), dataset.from_categorical(prediction[2])]

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nakdimon"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
   { name="Elazar Gershuni", email="elazarg@gmail.com" },
 ]
@@ -27,6 +27,9 @@ where = ["."]  # list of folders that contain the packages (["."] by default)
 include = ["nakdimon"]
 exclude = []  # exclude packages matching these glob patterns (empty by default)
 namespaces = false
+
+[tool.setuptools.package-data]
+nakdimon = ["Nakdimon.h5"]
 
 [project.urls]
 "Homepage" = "https://github.com/elazarg/nakdimon"

@@ -4,6 +4,7 @@ import werkzeug
 import logging
 
 from nakdimon import predict
+from nakdimon.config import MAIN_MODEL
 
 app = flask.Flask(__name__)
 
@@ -26,9 +27,9 @@ def diacritize():
 
 
 def main():
-    logging.info("Loading models/Nakdimon.h5")
+    logging.info(f"Loading {MAIN_MODEL}")
     try:
-        predict.predict("שלום", 'models/Nakdimon.h5')
+        predict.predict("שלום")
         logging.info("Done loading.")
     except OSError:
         logging.warning("Could not load default model")

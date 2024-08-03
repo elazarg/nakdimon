@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 import logging
-
+from nakdimon.config import MAIN_MODEL
 
 def do_train(**kwargs) -> None:
     from nakdimon import train
@@ -48,7 +48,7 @@ def main() -> None:
 
     parser_train = subparsers.add_parser('train', help='train Nakdimon')
     parser_train.add_argument('--wandb', action='store_true', help='use wandb.', default=False)
-    parser_train.add_argument('--model', help='path to output model (.h5 file)', default='models/Full.h5', dest='model_path')
+    parser_train.add_argument('--model', help='path to output model (.h5 file)', default=MAIN_MODEL, dest='model_path')
     parser_train.add_argument('--ablation', help='ablation test', default=None, dest='ablation_name')
     parser_train.set_defaults(func=do_train)
 
@@ -60,7 +60,7 @@ def main() -> None:
     parser_test = subparsers.add_parser('run_test', help='diacritize a test set')
     parser_test.add_argument('--test_set', choices=available_tests, help='choose test set', default='tests/new')
     parser_test.add_argument('--system', choices=test_systems, help='diacritization system to use', default='Nakdimon')
-    parser_test.add_argument('--model', help='path to model (.h5 file)', default='models/Nakdimon.h5', dest='model_path')
+    parser_test.add_argument('--model', help='path to model (.h5 file)', default=MAIN_MODEL, dest='model_path')
     parser_test.add_argument('--skip-existing', action='store_true', help='skip existing files')
     parser_test.set_defaults(func=do_run_test)
 
@@ -114,6 +114,6 @@ def diacritize_main():
     sys.exit(0)
 
 
-def diacritize(text: str, model_path: str = 'models/Nakdimon.h5') -> str:
+def diacritize(text: str, model_path: str = MAIN_MODEL) -> str:
     import nakdimon.predict
     return nakdimon.predict.predict(text, model_path)
