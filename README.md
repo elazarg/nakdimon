@@ -4,6 +4,12 @@ Repository for the paper [Restoring Hebrew Diacritics Without a Dictionary](http
 
 Demo: https://nakdimon.org/
 
+Locally:
+```
+$ pip install nakdimon
+$ diacritize input_file.txt -o=output_file.txt
+```
+
 ## Building and running docker container
 Build the docker container:
 ```
@@ -25,7 +31,7 @@ To train, test and evaluate the system, run the following commands:
 > python nakdimon results --test_set=tests/new --systems Snopi Morfix Dicta MajAllWithDicta Nakdimon
 ```
 The first step trains the model and create a file named `Nakdimon.h5` in the `models` directory.
-By default, the model is the one described in the paper: `models/Nakdimon.h5`.
+By default, the model is the one described in the paper: `nakdimon/Nakdimon.h5`.
 If the model already exists, you may skip this step. 
 
 The second step asks the Nakdimon server to predict the diacritics for the test set. You may skip this step.

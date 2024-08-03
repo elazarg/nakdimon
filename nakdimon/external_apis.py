@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 from collections import defaultdict, Counter
 import re
 import json
@@ -10,7 +11,7 @@ import requests
 
 from nakdimon.hebrew import Niqqud
 from nakdimon import hebrew
-from nakdimon.config import MAIN_MODEL
+from nakdimon.config import MAIN_MODEL, MODELS_DIR
 
 
 class DottingError(RuntimeError):
@@ -174,6 +175,11 @@ def make_fetch_nakdimon(path):
 
 def make_nakdimon_no_server(path):
     from nakdimon.predict import predict
+
+    if path == MAIN_MODEL:
+        other_path = pathlib.Path(MODELS_DIR)/'Nakdimon.h5'
+        if other_path.exists():
+            path = other_path
 
     def run_nakdimon(text: str) -> str:
         return predict(text, path)
