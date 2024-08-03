@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.11.1-gpu
+FROM tensorflow/tensorflow:2.15.0-gpu
 
 #ENV VIRTUAL_ENV=/opt/venv
 #RUN python -m venv $VIRTUAL_ENV
@@ -6,6 +6,8 @@ FROM tensorflow/tensorflow:2.11.1-gpu
 RUN pip install --upgrade pip
 
 WORKDIR /app
+ENV PYTHONPATH=/app
+
 COPY README.md README.md
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt

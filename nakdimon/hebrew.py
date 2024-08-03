@@ -213,7 +213,7 @@ def split_by_length(characters: Iterable, maxlen: int):
 
 @dataclass(frozen=True)
 class Token:
-    items: tuple[HebrewItem]
+    items: tuple[HebrewItem, ...]
 
     def __str__(self):
         return ''.join(str(c) for c in self.items)
