@@ -22,8 +22,11 @@ dynamic = ["dependencies"]
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
-[tool.setuptools]
-py-modules = []
+[tool.setuptools.packages.find]
+where = ["."]  # list of folders that contain the packages (["."] by default)
+include = ["nakdimon"]
+exclude = []  # exclude packages matching these glob patterns (empty by default)
+namespaces = false
 
 [project.urls]
 "Homepage" = "https://github.com/elazarg/nakdimon"
