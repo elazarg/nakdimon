@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nakdimon"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Elazar Gershuni", email="elazarg@gmail.com" },
 ]
@@ -33,4 +33,5 @@ namespaces = false
 "Bug Tracker" = "https://github.com/elazarg/nakdimon/issues"
 
 [project.scripts]
-nakdimon = 'main:main'
+nakdimon = 'nakdimon:main'
+diacritize = 'nakdimon:diacritize_main'
