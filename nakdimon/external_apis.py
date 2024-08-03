@@ -8,8 +8,8 @@ from functools import wraps
 
 import requests
 
-from hebrew import Niqqud
-import hebrew
+from nakdimon.hebrew import Niqqud
+from nakdimon import hebrew
 
 
 class DottingError(RuntimeError):
@@ -172,10 +172,10 @@ def make_fetch_nakdimon(path):
 
 
 def make_nakdimon_no_server(path):
-    import predict
+    from nakdimon.predict import predict
 
     def run_nakdimon(text: str) -> str:
-        return predict.predict(path, text)
+        return predict(text, path)
 
     return run_nakdimon
 

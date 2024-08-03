@@ -6,9 +6,9 @@ from pathlib import Path
 
 import requests
 
-import external_apis
-import utils
-import hebrew
+from nakdimon import external_apis
+from nakdimon import utils
+from nakdimon import hebrew
 
 
 def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: str) -> None:

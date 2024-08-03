@@ -31,7 +31,7 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
     return res
 
 
-def predict(model_or_model_path: tf.Module, text: str, maxlen=10000) -> str:
+def predict(text: str, model_or_model_path: tf.Module|str = 'models/Nakdimon.h5', maxlen=10000) -> str:
     if isinstance(model_or_model_path, str):
         model = load_cached_model(model_or_model_path)
     elif isinstance(model_or_model_path, tf.Module):
@@ -48,6 +48,6 @@ def predict(model_or_model_path: tf.Module, text: str, maxlen=10000) -> str:
 def main(input_path='-', output_path='-'):
     with utils.smart_open(input_path, 'r', encoding='utf-8') as f:
         text = hebrew.remove_niqqud(f.read())
-    text = predict(load_cached_model('models/Nakdimon.h5'), text)
+    text = predict(text)
     with utils.smart_open(output_path, 'w', encoding='utf-8') as f:
         f.write(text)

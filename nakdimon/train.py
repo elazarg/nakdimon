@@ -1,20 +1,18 @@
 from __future__ import annotations
 from typing import Optional
 import logging
+from pathlib import Path
 
 import numpy as np
-
 from tensorflow.keras import layers
 import tensorflow as tf
-
 import wandb
 
-import dataset
-from dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
-import schedulers
+from nakdimon import dataset
+from nakdimon.dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
+from nakdimon import schedulers
+from nakdimon import transformer
 
-import transformer
-from pathlib import Path
 # assert tf.config.list_physical_devices('GPU')
 
 VALIDATION_PATH = 'hebrew_diacritized/validation/modern'
@@ -199,9 +197,9 @@ def load_validation_data():
 
 
 def ablation_metrics(model):
-    import predict
-    import metrics
-    import hebrew
+    from nakdimon import predict
+    from nakdimon import metrics
+    from nakdimon import hebrew
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
@@ -212,7 +210,7 @@ def ablation_metrics(model):
                 path.name,
                 {
                     'expected': doc,
-                    'actual': metrics.Document('actual', 'Nakdimon', predict.predict(model, hebrew.remove_niqqud(doc.text), maxlen=MAXLEN))
+                    'actual': metrics.Document('actual', 'Nakdimon', predict.predict(hebrew.remove_niqqud(doc.text), model, maxlen=MAXLEN))
                 }
             ))
 

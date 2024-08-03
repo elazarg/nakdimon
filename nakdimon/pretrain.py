@@ -4,11 +4,11 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import wandb
 
-from dataset import letters_table, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
-import utils
-import hebrew
-from train import TrainingParams
-import metrics
+from nakdimon.dataset import letters_table, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
+from nakdimon import utils
+from nakdimon import hebrew
+from nakdimon.train import TrainingParams
+from nakdimon import metrics
 
 
 pretrain_path = f'./models/wiki'

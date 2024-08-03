@@ -4,23 +4,23 @@ import os
 import logging
 
 
-def do_train(**kwargs):
-    import train
+def do_train(**kwargs) -> None:
+    from nakdimon import train
     train.main(**kwargs)
 
 
-def do_run_test(**kwargs):
-    import run_test
+def do_run_test(**kwargs) -> None:
+    from nakdimon import run_test
     run_test.main(**kwargs)
 
 
-def do_metrics(**kwargs):
-    import metrics
+def do_metrics(**kwargs) -> None:
+    from nakdimon import metrics
     metrics.main(**kwargs)
 
 
-def do_predict(**kwargs):
-    import predict
+def do_predict(**kwargs) -> None:
+    from nakdimon import predict
     predict.main(**kwargs)
 
 
@@ -35,8 +35,7 @@ def do_server(**kwargs):
     exit(1)
 
 
-if __name__ == '__main__':
-
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
     # Parse command line arguments
@@ -95,3 +94,6 @@ if __name__ == '__main__':
     args.func(**kwargs)
 
     sys.exit(0)
+
+if __name__ == '__main__':
+    main()

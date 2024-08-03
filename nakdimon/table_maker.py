@@ -1,7 +1,7 @@
 import os
 from collections import Counter
 
-import hebrew
+from nakdimon import hebrew
 
 
 def make_table_2():

@@ -1,3 +1,1 @@
-from .predict import predict
-
-__all__ = ['predict']
+from nakdimon.predict import predict as diacritize

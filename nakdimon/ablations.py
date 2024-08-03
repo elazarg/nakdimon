@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from train import TrainingParams
-import schedulers
+from nakdimon.train import TrainingParams
+from nakdimon import schedulers
 
 
 class FullTraining(TrainingParams):
@@ -33,7 +33,7 @@ def SingleLayerLarge():
 
 class SplitSin(TrainingParams):
     def build_model(self):
-        from train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        from nakdimon.train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
         layers = tf.keras.layers
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)

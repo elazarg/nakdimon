@@ -6,8 +6,8 @@ from dataclasses import dataclass
 import numpy as np
 import prettytable as pt
 
-import external_apis
-import hebrew
+from nakdimon import external_apis
+from nakdimon import hebrew
 
 
 @dataclass(frozen=True)

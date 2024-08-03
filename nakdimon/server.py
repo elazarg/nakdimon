@@ -3,7 +3,7 @@ import flask
 import werkzeug
 import logging
 
-import predict
+from nakdimon import predict
 
 app = flask.Flask(__name__)
 
@@ -18,7 +18,7 @@ def diacritize():
     logging.info(f'request: {text}')
     model_name = flask.request.values.get('model_name')
     logging.info(f'model_name: {model_name}')
-    actual = predict.predict(predict.load_cached_model(model_name), text)
+    actual = predict.predict(text, predict.load_cached_model(model_name))
     logging.debug(f'result: {actual}')
     response = flask.make_response(actual, 200)
     response.mimetype = "text/plain"
@@ -28,7 +28,7 @@ def diacritize():
 def main():
     logging.info("Loading models/Nakdimon.h5")
     try:
-        predict.predict(predict.load_cached_model('models/Nakdimon.h5'), "שלום")
+        predict.predict("שלום", 'models/Nakdimon.h5')
         logging.info("Done loading.")
     except OSError:
         logging.warning("Could not load default model")
