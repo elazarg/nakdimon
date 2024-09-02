@@ -1,0 +1,254 @@
+@import url(https://fonts.googleapis.com/earlyaccess/alefhebrew.css?display=swap);
+html, body {
+    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+}
+
+.footer {
+    margin-top: auto;
+}
+
+h1 {
+    text-align: center;
+    color: #0b5394ff;
+    font-size: 60px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#textboxes {
+    text-align: center;
+    width: 100%;
+    height: 100%;
+}
+
+footer {
+    text-align: center;
+}
+
+.button::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+}
+
+.button {
+    font-size: 150%;
+    display: inline-block;
+    *display: inline;
+    zoom: 1;
+    padding: 20px 20px;
+    margin: 0;
+    cursor: pointer;
+    border: 1px solid #bbb;
+    overflow: visible;
+    text-decoration: none;
+    white-space: nowrap;
+    color: #555;
+    background-color: #ddd;
+    background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    background-image: -moz-linear-gradient(top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    background-image: -ms-linear-gradient(top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    background-image: -o-linear-gradient(top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    background-image: linear-gradient(top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    -webkit-transition: background-color .2s ease-out;
+    -moz-transition: background-color .2s ease-out;
+    -ms-transition: background-color .2s ease-out;
+    -o-transition: background-color .2s ease-out;
+    transition: background-color .2s ease-out;
+    background-clip: padding-box;
+    /* Fix bleeding */
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+    -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 2px 2px -1px rgba(0, 0, 0, .5), 0 1px 0 rgba(255, 255, 255, .3) inset;
+    -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 2px 2px -1px rgba(0, 0, 0, .5), 0 1px 0 rgba(255, 255, 255, .3) inset;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 2px 2px -1px rgba(0, 0, 0, .5), 0 1px 0 rgba(255, 255, 255, .3) inset;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.button:hover {
+    background-color: #eee;
+    color: #555;
+}
+
+.button:active {
+    background: #e9e9e9;
+    position: relative;
+    top: 1px;
+    text-shadow: none;
+    -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, .3) inset;
+    -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, .3) inset;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .3) inset;
+}
+
+.button[disabled], .button[disabled]:hover, .button[disabled]:active {
+    border-color: #eaeaea;
+    background: #fafafa;
+    cursor: default;
+    position: static;
+    color: #999;
+    /* Usually, !important should be avoided but here it's really needed :) */
+    -moz-box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.button.large {
+    padding: 6px 15px;
+    text-transform: uppercase;
+}
+
+.button.large:active {
+    top: 2px;
+}
+
+/* Colored buttons styles */
+
+.button.green, .button.red, .button.blue {
+    color: #fff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+    background-image: -webkit-gradient(linear, left top, left bottom, from(rgba(255, 255, 255, .3)), to(rgba(255, 255, 255, 0)));
+    background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+    background-image: -moz-linear-gradient(top, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+    background-image: -ms-linear-gradient(top, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+    background-image: -o-linear-gradient(top, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+    background-image: linear-gradient(top, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0));
+}
+
+/* */
+
+.button.green {
+    background-color: darkgreen;
+    border-color: darkgreen;
+}
+
+.button.green:hover {
+    background-color: #62c462;
+}
+
+.button.green:active {
+    background: #57a957;
+}
+
+/* */
+
+.button.red {
+    background-color: #ca3535;
+    border-color: #c43c35;
+}
+
+.button.red:hover {
+    background-color: #ee5f5b;
+}
+
+.button.red:active {
+    background: #c43c35;
+}
+
+/* */
+
+.button.blue {
+    background-color: #0b5394ff;
+    border-color: #0b5394ff;
+}
+
+.button.blue:hover {
+    background-color: #70B9E8;
+}
+
+.button.blue:active {
+    background: #0b5394ff;
+}
+
+/* */
+
+.green[disabled], .green[disabled]:hover, .green[disabled]:active {
+    border-color: #57A957;
+    background: #57A957;
+    color: #D2FFD2;
+}
+
+.red[disabled], .red[disabled]:hover, .red[disabled]:active {
+    border-color: #C43C35;
+    background: #C43C35;
+    color: #FFD3D3;
+}
+
+.blue[disabled], .blue[disabled]:hover, .blue[disabled]:active {
+    border-color: #269CE9;
+    background: #269CE9;
+    color: #93D5FF;
+}
+
+.charItem:hover {
+    /* font-size: 120%; */
+    cursor: none;
+    color: green;
+    /* padding-top: 0; */
+    /* padding-bottom: 0; */
+    /* line-height: 1; */
+}
+
+#dotted_text_container {
+    /* user-select: none; */
+    overflow-y: scroll;
+}
+#log {
+    text-align: center;
+}
+textarea, #dotted_text_container {
+    font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: justify;
+    line-height: 1.4;
+    font-size: 30px;
+    min-height: 30vh;
+    width: 90%;
+    border: 1px solid rgb(234, 253, 251);
+    background-color: rgb(234, 253, 251);
+    padding-left: 10px;
+    padding-right: 10px;
+    background-position: bottom right;
+    background-repeat: no-repeat;
+    margin-top: 0.5rem;
+}
+
+textarea {
+    cursor: text;
+}
+textarea.busy {
+    cursor: wait;
+}
+
+.tippy-box {
+    background-color: unset;
+}
+
+.niqqud-button {
+    font-size: 30px;
+    min-width: 35px;
+}
+
+.empty {
+    opacity: 0;
+}
+
+.bar {
+    background-color: #0b5394ff;
+}
