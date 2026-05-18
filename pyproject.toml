@@ -19,6 +19,14 @@ classifiers = [
 ]
 dynamic = ["dependencies"]
 
+[project.optional-dependencies]
+tf = [
+    "keras==2.15.0",
+    "tensorflow==2.15.0",
+    "tensorflowjs==4.20.0",
+    "wandb==0.17.0",
+]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 

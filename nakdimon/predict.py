@@ -1,21 +1,32 @@
 import logging
 import pathlib
 from functools import lru_cache
-
-import tensorflow as tf
+from typing import Any
 
 from nakdimon import utils, dataset, hebrew
 from nakdimon.config import MAIN_MODEL
 
-if tf.config.set_visible_devices([], 'GPU'):
-    logging.warning('No GPU available.')
+def _require_tensorflow():
+    try:
+        import tensorflow as tf  # type: ignore
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "TensorFlow is required for the built-in Nakdimon .h5 predictor. "
+            "Install it with `pip install 'nakdimon[tf]'`."
+        ) from exc
+
+    if tf.config.set_visible_devices([], 'GPU'):
+        logging.warning('No GPU available.')
+
+    return tf
 
 
 @lru_cache()
-def load_cached_model(m: pathlib.Path | str) -> tf.Module:
+def load_cached_model(m: pathlib.Path | str) -> Any:
     if isinstance(m, str):
         return load_cached_model(pathlib.Path(m))
     assert isinstance(m, pathlib.Path)
+    tf = _require_tensorflow()
     model = tf.keras.models.load_model(m, custom_objects={'loss': None})
     return model
 
@@ -35,7 +46,8 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
     return res
 
 
-def predict(text: str, model_or_model_path: tf.Module | str = MAIN_MODEL, maxlen=10000) -> str:
+def predict(text: str, model_or_model_path: Any | str = MAIN_MODEL, maxlen=10000) -> str:
+    tf = _require_tensorflow()
     if isinstance(model_or_model_path, (pathlib.Path, str)):
         model_or_model_path = load_cached_model(model_or_model_path)
     if not isinstance(model_or_model_path, tf.Module):
