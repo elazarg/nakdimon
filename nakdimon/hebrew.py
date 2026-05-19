@@ -5,11 +5,9 @@ import re
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import NamedTuple
 
 from nakdimon import utils
-
 
 # "rafe" denotes a letter to which it would have been valid to add a diacritic of some category
 # but instead it is decided not to. This makes the metrics less biased.
@@ -50,21 +48,32 @@ ANY_NIQQUD = [RAFE] + NIQQUD[1:] + NIQQUD_SIN[1:] + DAGESH[1:]
 VALID_LETTERS = [' ', '!', '"', "'", '(', ')', ',', '-', '.', ':', ';', '?'] + HEBREW_LETTERS
 SPECIAL_TOKENS = ['H', 'O', '5']
 
-ENDINGS_TO_REGULAR = dict(zip('ךםןףץ', 'כמנפצ'))
+ENDINGS_TO_REGULAR = dict(zip('ךםןףץ', 'כמנפצ', strict=True))
 
 
 def normalize(c):
-    if c in VALID_LETTERS: return c
-    if c in ENDINGS_TO_REGULAR: return ENDINGS_TO_REGULAR[c]
-    if c in ['\n', '\t']: return ' '
-    if c in ['־', '‒', '–', '—', '―', '−']: return '-'
-    if c == '[': return '('
-    if c == ']': return ')'
-    if c in ['´', '‘', '’']: return "'"
-    if c in ['“', '”', '״']: return '"'
-    if c.isdigit(): return '5'
-    if c == '…': return ','
-    if c in ['ײ', 'װ', 'ױ']: return 'H'
+    if c in VALID_LETTERS:
+        return c
+    if c in ENDINGS_TO_REGULAR:
+        return ENDINGS_TO_REGULAR[c]
+    if c in ['\n', '\t']:
+        return ' '
+    if c in ['־', '‒', '–', '—', '―', '−']:
+        return '-'
+    if c == '[':
+        return '('
+    if c == ']':
+        return ')'
+    if c in ['´', '‘', '’']:
+        return "'"
+    if c in ['“', '”', '״']:
+        return '"'
+    if c.isdigit():
+        return '5'
+    if c == '…':
+        return ','
+    if c in ['ײ', 'װ', 'ױ']:
+        return 'H'
     return 'O'
 
 
@@ -193,9 +202,9 @@ def iterate_file(path) -> Iterator[HebrewItem]:
 def is_space(c) -> bool:
     if isinstance(c, HebrewItem):
         return c.letter == ' '
-    elif isinstance(c, str):
+    if isinstance(c, str):
         return c == ' '
-    assert False
+    raise TypeError(f"expected HebrewItem or str, got {type(c).__name__}")
 
 
 def split_by_length(characters: Iterable, maxlen: int):
@@ -220,10 +229,10 @@ class Token:
     def __str__(self):
         return ''.join(str(c) for c in self.items)
 
-    def __lt__(self, other: 'Token'):
+    def __lt__(self, other: Token):
         return (self.to_undotted(), str(self)) < (other.to_undotted(), str(other))
 
-    def split_on_hebrew(self) -> tuple[str, 'Token', str]:
+    def split_on_hebrew(self) -> tuple[str, Token, str]:
         start = 0
         end = len(self.items) - 1
         while True:
@@ -244,7 +253,6 @@ class Token:
     def __eq__(self, other):
         return self.items == other.items
 
-    @lru_cache()
     def to_undotted(self):
         return ''.join(str(c.letter) for c in self.items)
 
@@ -254,7 +262,7 @@ class Token:
     def is_definite(self):
         return len(self.items) > 2 and self.items[0].niqqud == 'הַ'[-1] and self.items[0].letter in 'כבלה'
 
-    def vocalize(self) -> 'Token':
+    def vocalize(self) -> Token:
         return Token(tuple([c.vocalize() for c in self.items]))
 
     def is_hebrew(self) -> bool:
@@ -302,12 +310,6 @@ def count_hebrew_tokens(paths: Iterable[str]):
 
 
 def stuff(tokens):
-    stripped_tokens = [token.strip_nonhebrew() for token in tokens if token.strip_nonhebrew()]
-    word_dict = collect_wordmap(stripped_tokens)
-    # for k, v in sorted(word_dict.items(), key=lambda kv: (len(kv[1]), sum(kv[1].values()))):
-    #     print(k, ':', str(v).replace('Counter', ''))
-    # print(len(word_dict))
-
     for t in tokens:
         if t.is_definite() and t.items[1].letter not in 'אהחער' and not t.items[1].dagesh:
             print(t)
@@ -324,26 +326,32 @@ def remove_niqqud(text: str) -> str:
     return re.sub('[\u05B0-\u05BC\u05C1\u05C2ׇ\u05c7\u05BF]', '', text)
 
 
+_CHAR_NAMES = {
+    DAGESH_LETTER: 'דגש\\שורוק',
+    Niqqud.KAMATZ: 'קמץ',
+    Niqqud.PATAKH: 'פתח',
+    Niqqud.TZEIRE: 'צירה',
+    Niqqud.SEGOL: 'סגול',
+    Niqqud.SHVA: 'שוא',
+    Niqqud.HOLAM: 'חולם',
+    Niqqud.KUBUTZ: 'קובוץ',
+    Niqqud.HIRIK: 'חיריק',
+    Niqqud.REDUCED_KAMATZ: 'חטף-קמץ',
+    Niqqud.REDUCED_PATAKH: 'חטף-פתח',
+    Niqqud.REDUCED_SEGOL: 'חטף-סגול',
+    SHIN_SMALIT: 'שין-שמאלית',
+    SHIN_YEMANIT: 'שין-ימנית',
+}
+
+
 def name_of(c):
     if 'א' <= c <= 'ת':
         return c
-    if c == DAGESH_LETTER: return 'דגש\שורוק'
-    if c == Niqqud.KAMATZ: return 'קמץ'
-    if c == Niqqud.PATAKH: return 'פתח'
-    if c == Niqqud.TZEIRE: return 'צירה'
-    if c == Niqqud.SEGOL: return 'סגול'
-    if c == Niqqud.SHVA: return 'שוא'
-    if c == Niqqud.HOLAM: return 'חולם'
-    if c == Niqqud.KUBUTZ: return 'קובוץ'
-    if c == Niqqud.HIRIK: return 'חיריק'
-    if c == Niqqud.REDUCED_KAMATZ: return 'חטף-קמץ'
-    if c == Niqqud.REDUCED_PATAKH: return 'חטף-פתח'
-    if c == Niqqud.REDUCED_SEGOL: return 'חטף-סגול'
-    if c == SHIN_SMALIT: return 'שין-שמאלית'
-    if c == SHIN_YEMANIT: return 'שין-ימנית'
+    if c in _CHAR_NAMES:
+        return _CHAR_NAMES[c]
     if c.isprintable():
         return c
-    return "לא ידוע ({})".format(hex(ord(c)))
+    return f"לא ידוע ({hex(ord(c))})"
 
 
 def find_longest_undotted(text):
@@ -436,7 +444,7 @@ def table_2():
 
 if __name__ == '__main__':
     # table_2()
-    import train
+    from nakdimon import train
     # print(count_hebrew_tokens(['hebrew_diacritized/validation']))
     # print(count_hebrew_tokens(train.Full.corpus["premodern"]))
     print(count_hebrew_tokens(train.Full.corpus["automatic"]))

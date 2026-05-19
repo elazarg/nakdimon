@@ -18,9 +18,9 @@ def load_cached_model(path: Path | str) -> ort.InferenceSession:
 
 def merge_unconditional(texts, tnss, nss, dss, sss):
     res = []
-    for ts, tns, ns, ds, ss in zip(texts, tnss, nss, dss, sss):
+    for ts, tns, ns, ds, ss in zip(texts, tnss, nss, dss, sss, strict=True):
         sentence = []
-        for t, tn, n, d, s in zip(ts, tns, ns, ds, ss):
+        for t, tn, n, d, s in zip(ts, tns, ns, ds, ss, strict=True):
             if tn == 0:
                 break
             sentence.append(t)

@@ -1,15 +1,13 @@
 import numpy as np
 import tensorflow as tf
+import wandb
 from tensorflow import keras
 from tensorflow.keras import layers
-import wandb
 
-from nakdimon.dataset import letters_table, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
-from nakdimon import utils
-from nakdimon import hebrew
-from nakdimon.train import TrainingParams
-from nakdimon import metrics
+from nakdimon import hebrew, metrics, utils
 from nakdimon.config import MODELS_DIR
+from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE, letters_table
+from nakdimon.train import TrainingParams
 
 pretrain_path = f'{MODELS_DIR}/wiki'
 model_name = pretrain_path + 'pretrain.h5'
@@ -148,7 +146,7 @@ if __name__ == '__main__':
     # elif mode == 'train_ablation':
     #     train_ablation(PretrainedModernOnly())
     else:
-        import ablations
+        from nakdimon import ablations
         tf.config.set_visible_devices([], 'GPU')
         model_name = 'PretrainedModernOnly'
         model = tf.keras.models.load_model(f'{MODELS_DIR}/ablations/{model_name}.h5',

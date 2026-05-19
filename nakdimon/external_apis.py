@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import json
 import logging
 import pathlib
-from collections import defaultdict, Counter
 import re
-import json
+from collections import Counter, defaultdict
 from functools import wraps
 
 import requests
 
-from nakdimon.hebrew import Niqqud
 from nakdimon import hebrew
 from nakdimon.config import MAIN_MODEL, MODELS_DIR
+from nakdimon.hebrew import Niqqud
 
 
 class DottingError(RuntimeError):
@@ -218,18 +218,12 @@ class MajorityDiacritizer:
 
     def is_oov(self, word: str) -> bool:
         left, word, right = hebrew.split_nonhebrew(hebrew.remove_niqqud(word))
-        if word not in self.dictionary:
-            # all_oov.add(word)
-            return True
-        return False
+        return word not in self.dictionary
 
     def diacritize_token(self, word: str) -> str:
         left, word, right = hebrew.split_nonhebrew(word)
         word = hebrew.remove_niqqud(word)
-        if word in self.dictionary:
-            result = self.dictionary[word]
-        else:
-            result = word  # ''.join([self.dictionary.get(letter, '') for letter in word])
+        result = self.dictionary.get(word, word)
         return left + result + right
 
     def __call__(self, text: str) -> str:

@@ -19,36 +19,22 @@ def iterate_files(base_paths: Iterable[str]) -> Iterator[str]:
 
 
 def read_file(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, encoding='utf-8') as f:
         return f.read()
 
 
 # from: https://stackoverflow.com/a/45735618/2289509
 @contextlib.contextmanager
 def smart_open(filename: str, mode: str = 'r', *args, **kwargs):
-    """Open files and i/o streams transparently."""
+    """Open files and i/o streams transparently. '-' means stdin/stdout."""
     if filename == '-':
-        if 'r' in mode:
-            stream = sys.stdin
-        else:
-            stream = sys.stdout
-        if 'b' in mode:
-            fh = stream.buffer
-        else:
-            fh = stream
-        close = False
-    else:
-        fh = open(filename, mode, *args, **kwargs)
-        close = True
-
-    try:
+        stream = sys.stdin if 'r' in mode else sys.stdout
+        fh = stream.buffer if 'b' in mode else stream
         yield fh
-    finally:
-        if close:
-            try:
-                fh.close()
-            except AttributeError:
-                pass
+        return
+
+    with open(filename, mode, *args, **kwargs) as fh:  # noqa: SIM115 — context manager IS used here
+        yield fh
 
 
 def pad_sequences(sequences, maxlen, dtype, value) -> np.ndarray:

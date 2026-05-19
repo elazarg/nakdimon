@@ -4,15 +4,13 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from tensorflow.keras import layers
 import tensorflow as tf
 import wandb
+from tensorflow.keras import layers
 
-from nakdimon import dataset
-from nakdimon.dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
-from nakdimon import schedulers
-from nakdimon import transformer
+from nakdimon import dataset, schedulers, transformer
 from nakdimon.config import MODELS_DIR
+from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE
 
 # assert tf.config.list_physical_devices('GPU')
 
@@ -199,9 +197,7 @@ def load_validation_data():
 
 
 def ablation_metrics(model):
-    from nakdimon import predict
-    from nakdimon import metrics
-    from nakdimon import hebrew
+    from nakdimon import hebrew, metrics, predict
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
@@ -279,7 +275,7 @@ class Full(NakdimonParams):
 
 def main(*, model_path: str, wandb: bool, ablation_name: str | None):
     if ablation_name is not None:
-        import ablations
+        from nakdimon import ablations
         params = vars(ablations)[ablation_name]()
         model = train(params, ablation_name, ablation=False, wandb_enabled=wandb)
     else:

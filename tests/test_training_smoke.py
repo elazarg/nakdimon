@@ -73,8 +73,9 @@ class SmokeParams:
         tf.random.set_seed(0)
 
     def build_model(self):
-        from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE
         from tensorflow.keras import layers
+
+        from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)
         embed = layers.Embedding(LETTERS_SIZE, self.units, mask_zero=True)(inp)
@@ -144,6 +145,7 @@ def test_convert_to_onnx(converted_onnx: Path) -> None:
 def test_predict_via_onnx_runtime(converted_onnx: Path) -> None:
     """The converted ONNX model is loadable + runnable via the production predict path."""
     import onnxruntime as ort
+
     from nakdimon import predict
 
     sess = ort.InferenceSession(str(converted_onnx), providers=["CPUExecutionProvider"])

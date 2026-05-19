@@ -1,8 +1,10 @@
 import argparse
-import sys
-import os
 import logging
+import os
+import sys
+
 from nakdimon.config import MAIN_MODEL
+
 
 def do_train(**kwargs) -> None:
     from nakdimon import train
@@ -25,9 +27,9 @@ def do_predict(**kwargs) -> None:
 
 
 def do_server(**kwargs):
+    import importlib.util
     import os
     import sys
-    import importlib.util
     spec = importlib.util.find_spec("server")
     assert spec is not None and spec.origin is not None
     logging.info("Executing flask server...")

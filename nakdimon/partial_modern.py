@@ -1,7 +1,6 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
-
 
 results = [
   #   r  , cha     , dec     , wor     , voc
@@ -123,7 +122,7 @@ ax.set(xlabel="Number of modern documents in Nakdimon's training set",
 ax.set(ylim=(0, 26))
 
 ax.xaxis.label.set_fontsize(12)
-for l in ax.get_xticklabels():
-    l.set_fontsize(12)
+for label in ax.get_xticklabels():
+    label.set_fontsize(12)
 
 plt.show()
