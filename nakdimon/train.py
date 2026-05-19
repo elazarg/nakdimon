@@ -22,8 +22,26 @@ def _make_loss() -> tf.keras.losses.Loss:
     return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, ignore_class=0)
 
 
+class MaskedSparseCategoricalAccuracy(tf.keras.metrics.SparseCategoricalAccuracy):
+    """SparseCategoricalAccuracy that excludes positions where y_true == 0.
+
+    Mirrors the masking used by SparseCategoricalCrossentropy(ignore_class=0)
+    so reported N/D/S accuracy reflects only positions the loss optimises."""
+
+    def __init__(self, ignore_class: int = 0, name: str = "accuracy", dtype=None):
+        super().__init__(name=name, dtype=dtype)
+        self.ignore_class = ignore_class
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        dtype = self.dtype or tf.float32
+        mask = tf.cast(tf.math.not_equal(y_true, self.ignore_class), dtype)
+        if sample_weight is not None:
+            mask = mask * tf.cast(sample_weight, dtype)
+        return super().update_state(y_true, y_pred, sample_weight=mask)
+
+
 def _make_accuracy() -> tf.keras.metrics.Metric:
-    return tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy")
+    return MaskedSparseCategoricalAccuracy(ignore_class=0, name="accuracy")
 
 
 class NakdimonParams:
