@@ -1,22 +1,21 @@
 from __future__ import annotations
-from typing import Iterable
 
-import sys
 import contextlib
 import os
+import sys
+from collections.abc import Iterable, Iterator
 
 import numpy as np
 
 
-def iterate_files(base_paths: Iterable[str]) -> list[str]:
+def iterate_files(base_paths: Iterable[str]) -> Iterator[str]:
     for name in base_paths:
         if not os.path.isdir(name):
             yield name
             continue
-        for root, dirs, files in os.walk(name):
+        for root, _dirs, files in os.walk(name):
             for fname in files:
-                path = os.path.join(root, fname)
-                yield path
+                yield os.path.join(root, fname)
 
 
 def read_file(filename):

@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 import itertools
-from collections import defaultdict, Counter
-from dataclasses import dataclass
-from typing import NamedTuple, Iterator, Iterable, List, Tuple
-from functools import lru_cache
 import re
+from collections import Counter, defaultdict
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
+from functools import lru_cache
+from typing import NamedTuple
 
 from nakdimon import utils
 
@@ -88,7 +90,7 @@ class HebrewItem(NamedTuple):
         return str(self).replace(RAFE, '')
 
 
-def items_to_text(items: List[HebrewItem]) -> str:
+def items_to_text(items: list[HebrewItem]) -> str:
     return ''.join(str(item) for item in items).replace(RAFE, '')
 
 

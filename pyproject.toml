@@ -4,37 +4,74 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nakdimon"
-version = "0.1.2"
+version = "0.2.0"
 authors = [
-  { name="Elazar Gershuni", email="elazarg@gmail.com" },
+  { name = "Elazar Gershuni", email = "elazarg@gmail.com" },
 ]
 description = "Diacritic restoration for Hebrew"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.15"
 license = { file = "LICENSE" }
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dynamic = ["dependencies"]
+dependencies = [
+    "numpy>=2.1",
+    "onnxruntime>=1.20",
+    "requests>=2.32",
+    "Flask>=3.0",
+    "prettytable>=3.10",
+]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+[project.optional-dependencies]
+# Training stack (TF + wandb). Capped at Python 3.13 because TF has no 3.14 wheels.
+train = [
+    "tensorflow>=2.20,<3 ; python_version < '3.14'",
+    "tf-keras>=2.15 ; python_version < '3.14'",
+    "tf2onnx>=1.17 ; python_version < '3.14'",
+    "wandb>=0.19 ; python_version < '3.14'",
+]
+research = [
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+]
+dev = [
+    "pytest>=8",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
 
 [tool.setuptools.packages.find]
-where = ["."]  # list of folders that contain the packages (["."] by default)
+where = ["."]
 include = ["nakdimon"]
-exclude = []  # exclude packages matching these glob patterns (empty by default)
 namespaces = false
 
 [tool.setuptools.package-data]
-nakdimon = ["Nakdimon.h5"]
+nakdimon = ["Nakdimon.onnx"]
 
 [project.urls]
-"Homepage" = "https://github.com/elazarg/nakdimon"
+Homepage = "https://github.com/elazarg/nakdimon"
 "Bug Tracker" = "https://github.com/elazarg/nakdimon/issues"
 
 [project.scripts]
-nakdimon = 'nakdimon:main'
-diacritize = 'nakdimon:diacritize_main'
+nakdimon = "nakdimon:main"
+diacritize = "nakdimon:diacritize_main"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true

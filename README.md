@@ -4,6 +4,8 @@ Repository for the paper [Restoring Hebrew Diacritics Without a Dictionary](http
 
 Demo: https://nakdimon.org/
 
+Requires Python 3.12+. The runtime uses ONNX Runtime (no TensorFlow required to run inference).
+
 Locally:
 ```
 $ pip install nakdimon
@@ -11,28 +13,32 @@ $ diacritize input_file.txt -o=output_file.txt
 ```
 
 ## Building and running docker container
-Build the docker container:
 ```
 $ docker build -t nakdimon .
+$ docker run --rm -it nakdimon /bin/bash
 ```
 
-Run the docker container:
+## Development setup (with uv)
 ```
-$ docker run --rm --gpus all --user 1000:1000 -it nakdimon /bin/bash
+$ uv sync                  # install runtime deps
+$ uv sync --extra train    # add TensorFlow stack (Python 3.12–3.13 only)
+$ uv sync --extra research # add matplotlib/seaborn for plots
 ```
-
-The `--gpus all` flag is required to run the container with GPU support.
 
 ## Training and evaluating
-To train, test and evaluate the system, run the following commands:
+Training requires the `[train]` extra (TensorFlow + wandb + tf2onnx):
 ```
-> python nakdimon train --model=models/Nakdimon.h5
-> python nakdimon run_test --test_set=tests/new --model=models/Nakdimon.h5
-> python nakdimon results --test_set=tests/new --systems Snopi Morfix Dicta MajAllWithDicta Nakdimon
+$ pip install 'nakdimon[train]'
 ```
-The first step trains the model and create a file named `Nakdimon.h5` in the `models` directory.
-By default, the model is the one described in the paper: `nakdimon/Nakdimon.h5`.
-If the model already exists, you may skip this step. 
+Then:
+```
+> python -m nakdimon train --model=models/Nakdimon.keras
+> python scripts/convert_to_onnx.py models/Nakdimon.keras models/Nakdimon.onnx
+> python -m nakdimon run_test --test_set=tests/new --model=models/Nakdimon.onnx
+> python -m nakdimon results --test_set=tests/new --systems Snopi Morfix Dicta MajAllWithDicta Nakdimon
+```
+The trained `.h5` is converted to `.onnx` once; the runtime predictor consumes `.onnx`.
+By default, the bundled model is `nakdimon/Nakdimon.onnx` (shipped in the wheel).
 
 The second step asks the Nakdimon server to predict the diacritics for the test set. You may skip this step.
 A folder for the results is created in the chosen test folder, with the same name as the model; in this case, `tests/new/NakdimonNew`.
@@ -59,7 +65,7 @@ Note that `Morfix` cannot be used in this manner, as its license prohibit automa
 ## Running ablation tests
 You can use the `--ablation` flag to train different models for the ablation tests and other experiments:
 ```
-> python nakdimon train --model=models/SingleLayer.h5 --ablation=SingleLayer
+> python -m nakdimon train --model=models/SingleLayer.keras --ablation=SingleLayer
 ```
 See the file `ablation.py` for the list of available ablation parameters.
 

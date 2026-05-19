@@ -177,7 +177,7 @@ def make_nakdimon_no_server(path):
     from nakdimon.predict import predict
 
     if path == MAIN_MODEL:
-        other_path = pathlib.Path(MODELS_DIR)/'Nakdimon.h5'
+        other_path = pathlib.Path(MODELS_DIR) / "Nakdimon.onnx"
         if other_path.exists():
             path = other_path
 
@@ -201,7 +201,7 @@ class MajorityDiacritizer:
 
     @staticmethod
     def update_possibilities(possibilities: defaultdict[str, Counter], train_paths: tuple[str, ...]) -> None:
-        import hebrew
+        from nakdimon import hebrew
         for token in hebrew.collect_tokens(train_paths):
             word = token.to_text()
             if word:

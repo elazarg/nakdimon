@@ -1,13 +1,13 @@
 from __future__ import annotations
-from typing import Iterator, Optional
-from pathlib import Path
+
+from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import prettytable as pt
 
-from nakdimon import external_apis
-from nakdimon import hebrew
+from nakdimon import external_apis, hebrew
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,7 @@ def read_document_pack(path_to_expected: Path, systems: list[str]) -> DocumentPa
                          for system in systems})
 
 class Stats:
-    def __init__(self, basepath: Path, vocabulary: Optional[external_apis.MajorityDiacritizer]):
+    def __init__(self, basepath: Path, vocabulary: external_apis.MajorityDiacritizer | None):
         self.basepath = basepath
         self.vocabulary = vocabulary
 

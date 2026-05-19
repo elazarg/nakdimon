@@ -17,7 +17,7 @@ class CircularLearningRate(tf.keras.callbacks.Callback):
             lb = self.min_lr_2
             way = batch - self.mid
         lr = self.max_lr - way / self.mid * (self.max_lr - lb)
-        tf.keras.backend.set_value(self.model.optimizer.lr, lr)
+        self.model.optimizer.learning_rate.assign(lr)
 
 
 class CircularLearningRateSched(tf.keras.optimizers.schedules.LearningRateSchedule):

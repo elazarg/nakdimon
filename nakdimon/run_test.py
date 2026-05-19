@@ -15,8 +15,8 @@ def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: 
     assert system in external_apis.SYSTEMS
     if system == 'Nakdimon':
         path = Path(model_path)
-        assert path.suffix == '.h5', f"Expected a path to a h5 file, got {path.suffix}"
-        assert path.is_file(), "Expected a path to a h5 file"
+        assert path.suffix == ".onnx", f"Expected a .onnx model, got {path.suffix}"
+        assert path.is_file(), f"Model not found at {path}"
         diacritizer = external_apis.make_nakdimon_no_server(model_path)
         system = path.stem
     else:

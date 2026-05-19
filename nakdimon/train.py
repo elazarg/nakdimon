@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional
+
 import logging
 from pathlib import Path
 
@@ -20,13 +20,12 @@ VALIDATION_PATH = 'hebrew_diacritized/validation/modern'
 MAXLEN = 80
 
 
-def masked_metric(v, y_true):
-    mask = tf.math.not_equal(y_true, 0)
-    return tf.reduce_sum(tf.boolean_mask(v, mask)) / tf.cast(tf.math.count_nonzero(mask), tf.float32)
+def _make_loss() -> tf.keras.losses.Loss:
+    return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, ignore_class=0)
 
 
-def accuracy(y_true, y_pred):
-    return masked_metric(tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred), y_true)
+def _make_accuracy() -> tf.keras.metrics.Metric:
+    return tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy")
 
 
 class NakdimonParams:
@@ -57,8 +56,6 @@ class NakdimonParams:
 
     subtraining_rate = {'premodern': 1, 'modern': 1}
 
-    def loss(self, y_true, y_pred):
-        return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
 
     def epoch_params(self, data):
         yield ('premodern', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
@@ -223,9 +220,11 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
     validation_data = load_validation_data() if ablation else None
     logging.info("Creating model...")
     model = params.build_model()
-    model.compile(loss=params.loss,
-                  optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
-                  metrics=accuracy)
+    model.compile(
+        loss=_make_loss(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+        metrics={"N": _make_accuracy(), "D": _make_accuracy(), "S": _make_accuracy()},
+    )
 
     config = {
         'batch_size': params.batch_size,
@@ -247,14 +246,10 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
         for phase, (stage, n_epochs, scheduler) in enumerate(params.epoch_params(train_dict)):
             logging.info(f"Training phase {phase}: {stage}, {n_epochs} epochs.")
 
-            training_data = (x, y) = train_dict[stage]
+            x, y = train_dict[stage]
 
-            wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
-                                                       training_data=training_data,
-                                                       validation_data=validation_data,
-                                                       save_model=False,
-                                                       log_weights=False,
-                                                       save_graph=False)
+            from wandb.integration.keras import WandbMetricsLogger
+            wandb_callback = WandbMetricsLogger(log_freq=10)
 
             model.fit(x, y, validation_data=validation_data,
                       initial_epoch=last_epoch,
@@ -271,14 +266,14 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
 
 def train_ablation(params, group):
     model = train(params, group, ablation=True)
-    model.save(f'./{MODELS_DIR}/ablations/{params.name}.h5')
+    model.save(f"./{MODELS_DIR}/ablations/{params.name}.keras")
 
 
 class Full(NakdimonParams):
     validation_rate = 0
 
 
-def main(*, model_path: str, wandb: bool, ablation_name: Optional[str]):
+def main(*, model_path: str, wandb: bool, ablation_name: str | None):
     if ablation_name is not None:
         import ablations
         params = vars(ablations)[ablation_name]()
