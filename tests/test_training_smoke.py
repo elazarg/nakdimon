@@ -45,6 +45,9 @@ class SmokeParams:
         "modern": ("hebrew_diacritized/validation",),
     }
 
+    def loss(self):
+        return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, ignore_class=0)
+
     def epoch_params(self, data):
         # Exercise BOTH schedulers used in production:
         # CircularLearningRate (per-batch optimizer.learning_rate.assign) for premodern,

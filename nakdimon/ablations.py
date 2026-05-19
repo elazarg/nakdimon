@@ -54,8 +54,9 @@ class SplitSin(TrainingParams):
 
 
 class UnmaskedLoss(TrainingParams):
-    def loss(self, y_true, y_pred):
-        return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True)
+    def loss(self):
+        # Ablation: drop the ignore_class=0 masking — train against padding too.
+        return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
 
 class ConstantLR(TrainingParams):

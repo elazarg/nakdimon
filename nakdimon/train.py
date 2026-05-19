@@ -56,6 +56,10 @@ class NakdimonParams:
 
     subtraining_rate = {'premodern': 1, 'modern': 1}
 
+    def loss(self):
+        """Returns the keras Loss instance used to compile the model.
+        Override in a subclass to swap in a different loss for an ablation."""
+        return _make_loss()
 
     def epoch_params(self, data):
         yield ('premodern', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
@@ -221,7 +225,7 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
     logging.info("Creating model...")
     model = params.build_model()
     model.compile(
-        loss=_make_loss(),
+        loss=params.loss(),
         optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
         metrics={"N": _make_accuracy(), "D": _make_accuracy(), "S": _make_accuracy()},
     )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import onnxruntime as ort
@@ -30,13 +31,25 @@ def merge_unconditional(texts, tnss, nss, dss, sss):
     return res
 
 
-def predict(text: str, model: ort.InferenceSession | Path | str = MAIN_MODEL, maxlen: int = 10000) -> str:
+def _run_inference(model: Any, x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Dispatch by model type. ONNX runtime is the standard runtime path; an
+    in-memory Keras model is supported for training-time ablation hooks that
+    evaluate the model without writing it to disk first."""
+    if isinstance(model, ort.InferenceSession):
+        inputs = {model.get_inputs()[0].name: x.astype(np.int32)}
+        n_out, d_out, s_out = model.run(None, inputs)
+        return n_out, d_out, s_out
+    # Keras / tf.Module: duck-typed `.predict(x)` returning [N, D, S]
+    outputs = model.predict(x, verbose=0)
+    return outputs[0], outputs[1], outputs[2]
+
+
+def predict(text: str, model: Any = MAIN_MODEL, maxlen: int = 10000) -> str:
     if isinstance(model, (Path, str)):
         model = load_cached_model(model)
 
     data = dataset.Data.from_text(hebrew.iterate_dotted_text(text), maxlen)
-    inputs = {model.get_inputs()[0].name: data.normalized.astype(np.int32)}
-    n_out, d_out, s_out = model.run(None, inputs)
+    n_out, d_out, s_out = _run_inference(model, data.normalized)
 
     actual_niqqud = dataset.from_categorical(n_out)
     actual_dagesh = dataset.from_categorical(d_out)
