@@ -110,8 +110,9 @@ jobs:
           # `python` resolve from the freshly installed wheel — and resolve
           # without OS-specific `.exe` handling.
           echo "$VENV_BIN" >> "$GITHUB_PATH"
-          "$VENV_BIN/python" -m pip install --upgrade pip
-          "$VENV_BIN/pip" install dist/nakdimon-*.whl
+          # `uv venv` doesn't seed pip; use uv's resolver to install the wheel
+          # into that specific venv directly.
+          uv pip install --python "$VENV_BIN/python" dist/nakdimon-*.whl
       - name: CLI works from a directory without tests/ — version / help
         shell: bash
         run: |
