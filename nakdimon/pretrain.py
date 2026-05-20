@@ -1,15 +1,13 @@
 import numpy as np
 import tensorflow as tf
+import wandb
 from tensorflow import keras
 from tensorflow.keras import layers
-import wandb
 
-from nakdimon.dataset import letters_table, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
-from nakdimon import utils
-from nakdimon import hebrew
-from nakdimon.train import TrainingParams
-from nakdimon import metrics
+from nakdimon import hebrew, metrics, utils
 from nakdimon.config import MODELS_DIR
+from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE, letters_table
+from nakdimon.train import TrainingParams
 
 pretrain_path = f'{MODELS_DIR}/wiki'
 model_name = pretrain_path + 'pretrain.h5'
@@ -103,7 +101,7 @@ def load_plaintext(filename, maxlen):
 def pretrain():
     model = self_supervized_model(400)
     model.compile(loss='sparse_categorical_crossentropy',
-                  optimizer=keras.optimizers.legacy.Adam(learning_rate=8e-5),
+                  optimizer=keras.optimizers.Adam(learning_rate=8e-5),
                   metrics='accuracy')
 
     config = {
@@ -118,9 +116,8 @@ def pretrain():
                      tags=[],
                      config=config)
 
-    wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=50,
-                                               save_model=False,
-                                               log_weights=False)
+    from wandb.integration.keras import WandbMetricsLogger
+    wandb_callback = WandbMetricsLogger(log_freq=50)
 
     with run:
         for fname in utils.iterate_files(["../wikipedia/AA"]):
@@ -129,9 +126,9 @@ def pretrain():
             utils.shuffle_in_unison(raw_y)
             x, y = get_masked(raw_y, 0.3)
             model.fit(x, y, batch_size=128, validation_split=0.1, callbacks=[wandb_callback])
-            model.save(f'{pretrain_path}/{name}.h5', save_format='tf')
+            model.save(f'{pretrain_path}/{name}.keras')
 
-    model.save(model_name, save_format='tf')
+    model.save(model_name)
     return model
 
 
@@ -149,7 +146,7 @@ if __name__ == '__main__':
     # elif mode == 'train_ablation':
     #     train_ablation(PretrainedModernOnly())
     else:
-        import ablations
+        from nakdimon import ablations
         tf.config.set_visible_devices([], 'GPU')
         model_name = 'PretrainedModernOnly'
         model = tf.keras.models.load_model(f'{MODELS_DIR}/ablations/{model_name}.h5',

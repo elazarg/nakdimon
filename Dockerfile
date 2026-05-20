@@ -1,25 +1,27 @@
-FROM tensorflow/tensorflow:2.15.0-gpu
+# syntax=docker/dockerfile:1.7
+# Slim runtime image: pure ONNX, no TensorFlow.
+FROM python:3.13-slim AS runtime
 
-#ENV VIRTUAL_ENV=/opt/venv
-#RUN python -m venv $VIRTUAL_ENV
-#ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install --upgrade pip
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+ENV UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
-ENV PYTHONPATH=/app
 
-COPY README.md README.md
-COPY pyproject.toml pyproject.toml
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+# Install deps first (cached layer)
+COPY pyproject.toml uv.lock README.md LICENSE ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
-COPY hebrew_diacritized hebrew_diacritized
-COPY tests tests
-COPY models models
-COPY nakdimon nakdimon
+COPY nakdimon ./nakdimon
+COPY hebrew_diacritized ./hebrew_diacritized
+COPY tests ./tests
 
-RUN chown -R 1000:1000 .
-RUN chmod -R 755 .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
-CMD python nakdimon run_test \
- && python nakdimon results --systems MajAllWithDicta Snopi Morfix Dicta Nakdimon
+CMD ["python", "-m", "nakdimon", "run_test"]

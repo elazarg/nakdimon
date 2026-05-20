@@ -1,18 +1,16 @@
 from __future__ import annotations
-from typing import Optional
+
 import logging
 from pathlib import Path
 
 import numpy as np
-from tensorflow.keras import layers
 import tensorflow as tf
 import wandb
+from tensorflow.keras import layers
 
-from nakdimon import dataset
-from nakdimon.dataset import NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE, LETTERS_SIZE
-from nakdimon import schedulers
-from nakdimon import transformer
+from nakdimon import dataset, schedulers, transformer
 from nakdimon.config import MODELS_DIR
+from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE
 
 # assert tf.config.list_physical_devices('GPU')
 
@@ -20,13 +18,30 @@ VALIDATION_PATH = 'hebrew_diacritized/validation/modern'
 MAXLEN = 80
 
 
-def masked_metric(v, y_true):
-    mask = tf.math.not_equal(y_true, 0)
-    return tf.reduce_sum(tf.boolean_mask(v, mask)) / tf.cast(tf.math.count_nonzero(mask), tf.float32)
+def _make_loss() -> tf.keras.losses.Loss:
+    return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, ignore_class=0)
 
 
-def accuracy(y_true, y_pred):
-    return masked_metric(tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred), y_true)
+class MaskedSparseCategoricalAccuracy(tf.keras.metrics.SparseCategoricalAccuracy):
+    """SparseCategoricalAccuracy that excludes positions where y_true == 0.
+
+    Mirrors the masking used by SparseCategoricalCrossentropy(ignore_class=0)
+    so reported N/D/S accuracy reflects only positions the loss optimises."""
+
+    def __init__(self, ignore_class: int = 0, name: str = "accuracy", dtype=None):
+        super().__init__(name=name, dtype=dtype)
+        self.ignore_class = ignore_class
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        dtype = self.dtype or tf.float32
+        mask = tf.cast(tf.math.not_equal(y_true, self.ignore_class), dtype)
+        if sample_weight is not None:
+            mask = mask * tf.cast(sample_weight, dtype)
+        return super().update_state(y_true, y_pred, sample_weight=mask)
+
+
+def _make_accuracy() -> tf.keras.metrics.Metric:
+    return MaskedSparseCategoricalAccuracy(ignore_class=0, name="accuracy")
 
 
 class NakdimonParams:
@@ -57,8 +72,10 @@ class NakdimonParams:
 
     subtraining_rate = {'premodern': 1, 'modern': 1}
 
-    def loss(self, y_true, y_pred):
-        return masked_metric(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True), y_true)
+    def loss(self):
+        """Returns the keras Loss instance used to compile the model.
+        Override in a subclass to swap in a different loss for an ablation."""
+        return _make_loss()
 
     def epoch_params(self, data):
         yield ('premodern', 1, schedulers.CircularLearningRate(3e-3, 8e-3, 1e-4, data['premodern'][0], self.batch_size))
@@ -198,9 +215,7 @@ def load_validation_data():
 
 
 def ablation_metrics(model):
-    from nakdimon import predict
-    from nakdimon import metrics
-    from nakdimon import hebrew
+    from nakdimon import hebrew, metrics, predict
 
     def calculate_metrics(model, validation_path):
         for path in Path(validation_path).glob('*'):
@@ -223,9 +238,11 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
     validation_data = load_validation_data() if ablation else None
     logging.info("Creating model...")
     model = params.build_model()
-    model.compile(loss=params.loss,
-                  optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
-                  metrics=accuracy)
+    model.compile(
+        loss=params.loss(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+        metrics={"N": _make_accuracy(), "D": _make_accuracy(), "S": _make_accuracy()},
+    )
 
     config = {
         'batch_size': params.batch_size,
@@ -247,14 +264,10 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
         for phase, (stage, n_epochs, scheduler) in enumerate(params.epoch_params(train_dict)):
             logging.info(f"Training phase {phase}: {stage}, {n_epochs} epochs.")
 
-            training_data = (x, y) = train_dict[stage]
+            x, y = train_dict[stage]
 
-            wandb_callback = wandb.keras.WandbCallback(log_batch_frequency=10,
-                                                       training_data=training_data,
-                                                       validation_data=validation_data,
-                                                       save_model=False,
-                                                       log_weights=False,
-                                                       save_graph=False)
+            from wandb.integration.keras import WandbMetricsLogger
+            wandb_callback = WandbMetricsLogger(log_freq=10)
 
             model.fit(x, y, validation_data=validation_data,
                       initial_epoch=last_epoch,
@@ -271,16 +284,16 @@ def train(params: NakdimonParams, group, ablation=False, wandb_enabled=False):
 
 def train_ablation(params, group):
     model = train(params, group, ablation=True)
-    model.save(f'./{MODELS_DIR}/ablations/{params.name}.h5')
+    model.save(f"./{MODELS_DIR}/ablations/{params.name}.keras")
 
 
 class Full(NakdimonParams):
     validation_rate = 0
 
 
-def main(*, model_path: str, wandb: bool, ablation_name: Optional[str]):
+def main(*, model_path: str, wandb: bool, ablation_name: str | None):
     if ablation_name is not None:
-        import ablations
+        from nakdimon import ablations
         params = vars(ablations)[ablation_name]()
         model = train(params, ablation_name, ablation=False, wandb_enabled=wandb)
     else:

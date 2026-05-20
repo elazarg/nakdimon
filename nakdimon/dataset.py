@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import random
+
 import numpy as np
 
 from nakdimon import hebrew, utils
-
 
 
 class CharacterTable:
@@ -52,9 +52,9 @@ def from_categorical(t):
 
 def merge(texts, tnss, nss, dss, sss):
     res = []
-    for ts, tns, ns, ds, ss in zip(texts, tnss, nss, dss, sss):
+    for ts, tns, ns, ds, ss in zip(texts, tnss, nss, dss, sss, strict=True):
         sentence = []
-        for t, tn, n, d, s in zip(ts, tns, ns, ds, ss):
+        for t, tn, n, d, s in zip(ts, tns, ns, ds, ss, strict=True):
             if tn == 0:
                 break
             sentence.append(t)
@@ -103,7 +103,10 @@ class Data:
     def from_text(heb_items, maxlen: int) -> Data:
         assert heb_items
         data = Data()
-        text, normalized, dagesh, sin, niqqud = zip(*(zip(*line) for line in hebrew.split_by_length(heb_items, maxlen)))
+        text, normalized, dagesh, sin, niqqud = zip(
+            *(zip(*line, strict=True) for line in hebrew.split_by_length(heb_items, maxlen)),
+            strict=True,
+        )
 
         def pad(ords, dtype='int32', value=0):
             return utils.pad_sequences(ords, maxlen=maxlen, dtype=dtype, value=value)

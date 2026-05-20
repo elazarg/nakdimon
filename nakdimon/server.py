@@ -1,7 +1,9 @@
 from __future__ import annotations
+
+import logging
+
 import flask
 import werkzeug
-import logging
 
 from nakdimon import predict
 from nakdimon.config import MAIN_MODEL

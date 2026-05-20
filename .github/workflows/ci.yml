@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.python-version }} / ${{ matrix.extras }}
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+        extras: ["core"]
+        include:
+          - python-version: "3.12"
+            extras: "train"
+          - python-version: "3.13"
+            extras: "train"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: ${{ matrix.extras == 'train' && 'recursive' || 'false' }}
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+      - name: Install (${{ matrix.extras }})
+        run: |
+          if [ "${{ matrix.extras }}" = "core" ]; then
+            uv sync --frozen --no-dev --no-install-project
+            uv pip install -e . --no-deps
+          else
+            uv sync --frozen --extra train --no-dev --no-install-project
+            uv pip install -e . --no-deps
+            uv pip install pytest
+          fi
+      - name: Smoke-import core
+        run: uv run python -c "import nakdimon; from nakdimon import predict, hebrew, dataset, config; print('imports OK')"
+      - name: Smoke-predict (core)
+        if: matrix.extras == 'core'
+        run: |
+          uv run python -c "
+          from nakdimon import predict
+          out = predict.predict('שלום עולם.')
+          assert 'ָ' in out or 'ַ' in out or 'ֹ' in out, f'no niqqud in output: {out!r}'
+          print('predict OK:', out)
+          "
+      - name: Training smoke test
+        if: matrix.extras == 'train'
+        env:
+          TF_CPP_MIN_LOG_LEVEL: "3"
+          WANDB_MODE: disabled
+        run: uv run pytest -v tests/test_training_smoke.py
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: uvx ruff check nakdimon scripts tests

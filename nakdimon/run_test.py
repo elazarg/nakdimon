@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import collections
 import logging
 import sys
@@ -6,17 +7,15 @@ from pathlib import Path
 
 import requests
 
-from nakdimon import external_apis
-from nakdimon import utils
-from nakdimon import hebrew
+from nakdimon import external_apis, hebrew, utils
 
 
 def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: str) -> None:
     assert system in external_apis.SYSTEMS
     if system == 'Nakdimon':
         path = Path(model_path)
-        assert path.suffix == '.h5', f"Expected a path to a h5 file, got {path.suffix}"
-        assert path.is_file(), "Expected a path to a h5 file"
+        assert path.suffix == ".onnx", f"Expected a .onnx model, got {path.suffix}"
+        assert path.is_file(), f"Model not found at {path}"
         diacritizer = external_apis.make_nakdimon_no_server(model_path)
         system = path.stem
     else:
@@ -32,7 +31,7 @@ def diacritize_all(system: str, basepath: str, skip_existing: bool, model_path: 
             else:
                 outfile.unlink()
         outfile.parent.mkdir(parents=True, exist_ok=True)
-        with open(infile, 'r', encoding='utf8') as f:
+        with open(infile, encoding='utf8') as f:
             expected = f.read()
         cleaned = hebrew.remove_niqqud(expected)
         actual = diacritizer(cleaned)
@@ -55,7 +54,7 @@ def count_all_ambiguity(basepath: str) -> None:
     for filename in utils.iterate_files([basepath]):
         print(filename, end=' ' * 30 + '\r', flush=True)
 
-        with open(filename, 'r', encoding='utf8') as r:
+        with open(filename, encoding='utf8') as r:
             expected = r.read()
 
         cleaned = hebrew.remove_niqqud(expected)

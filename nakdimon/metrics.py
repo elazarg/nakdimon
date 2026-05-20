@@ -1,13 +1,13 @@
 from __future__ import annotations
-from typing import Iterator, Optional
-from pathlib import Path
+
+from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import prettytable as pt
 
-from nakdimon import external_apis
-from nakdimon import hebrew
+from nakdimon import external_apis, hebrew
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,7 @@ def read_document_pack(path_to_expected: Path, systems: list[str]) -> DocumentPa
                          for system in systems})
 
 class Stats:
-    def __init__(self, basepath: Path, vocabulary: Optional[external_apis.MajorityDiacritizer]):
+    def __init__(self, basepath: Path, vocabulary: external_apis.MajorityDiacritizer | None):
         self.basepath = basepath
         self.vocabulary = vocabulary
 
@@ -91,7 +91,7 @@ class Stats:
         """
         Calculate character-level agreement between actual and expected.
         """
-        return self.mean_equal((x, y) for x, y in zip(doc_pack.actual.hebrew_items(), doc_pack.expected.hebrew_items())
+        return self.mean_equal((x, y) for x, y in zip(doc_pack.actual.hebrew_items(), doc_pack.expected.hebrew_items(), strict=False)
                                if hebrew.can_any(x.letter))
 
     def metric_dec(self, doc_pack: DocumentPack) -> float:
@@ -102,13 +102,13 @@ class Stats:
         expected_hebrew = doc_pack.expected.hebrew_items()
 
         return self.mean_equal(
-           ((x.niqqud, y.niqqud) for x, y in zip(actual_hebrew, expected_hebrew)
+           ((x.niqqud, y.niqqud) for x, y in zip(actual_hebrew, expected_hebrew, strict=False)
             if hebrew.can_niqqud(x.letter)),
 
-           ((x.dagesh, y.dagesh) for x, y in zip(actual_hebrew, expected_hebrew)
+           ((x.dagesh, y.dagesh) for x, y in zip(actual_hebrew, expected_hebrew, strict=False)
             if hebrew.can_dagesh(x.letter)),
 
-           ((x.sin, y.sin) for x, y in zip(actual_hebrew, expected_hebrew)
+           ((x.sin, y.sin) for x, y in zip(actual_hebrew, expected_hebrew, strict=False)
             if hebrew.can_sin(x.letter)),
         )
 
@@ -122,7 +122,7 @@ class Stats:
         Calculate token-level agreement between actual and expected,
         for tokens containing at least 2 Hebrew letters.
         """
-        return self.mean_equal((x, y) for x, y in zip(doc_pack.actual.tokens(), doc_pack.expected.tokens())
+        return self.mean_equal((x, y) for x, y in zip(doc_pack.actual.tokens(), doc_pack.expected.tokens(), strict=False)
                                if x.is_hebrew() and (not oov or self.is_oov(str(x))))
 
     def metric_voc(self, doc_pack: DocumentPack, oov=False) -> float:
@@ -130,7 +130,7 @@ class Stats:
         Calculate token-level agreement over vocalization, between actual and expected,
         for tokens containing at least 2 Hebrew letters.
         """
-        return self.mean_equal((x, y) for x, y in zip(doc_pack.actual.vocalized_tokens(), doc_pack.expected.vocalized_tokens())
+        return self.mean_equal((x, y) for x, y in zip(doc_pack.actual.vocalized_tokens(), doc_pack.expected.vocalized_tokens(), strict=False)
                                if x.is_hebrew() and (not oov or self.is_oov(str(x))))
 
     def mean_equal(self, *pair_iterables) -> float:
@@ -220,7 +220,7 @@ def adapt_morfix(expected_filename: str) -> None:
                     add = ''
                 fixed_actual.append(hebrew.HebrewItem(e, e, '', '', add))
             else:
-                assert False, hebrew.items_to_text(actual[j-15:j+15])
+                raise AssertionError(hebrew.items_to_text(actual[j-15:j+15]))
             i += 1
         i += 1
     fixed_actual_filename = Path(expected_filename.replace('expected', 'Morfix'))

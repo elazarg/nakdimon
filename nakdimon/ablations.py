@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from nakdimon.train import TrainingParams
 from nakdimon import schedulers
+from nakdimon.train import TrainingParams
 
 
 class FullTraining(TrainingParams):
@@ -10,7 +10,7 @@ class FullTraining(TrainingParams):
 
 class SingleLayer(TrainingParams):
     def build_model(self):
-        from train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        from nakdimon.dataset import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE
         layers = tf.keras.layers
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)
@@ -33,7 +33,7 @@ def SingleLayerLarge():
 
 class SplitSin(TrainingParams):
     def build_model(self):
-        from nakdimon.train import LETTERS_SIZE, NIQQUD_SIZE, DAGESH_SIZE, SIN_SIZE
+        from nakdimon.train import DAGESH_SIZE, LETTERS_SIZE, NIQQUD_SIZE, SIN_SIZE
         layers = tf.keras.layers
 
         inp = tf.keras.Input(shape=(None,), batch_size=None)
@@ -54,8 +54,9 @@ class SplitSin(TrainingParams):
 
 
 class UnmaskedLoss(TrainingParams):
-    def loss(self, y_true, y_pred):
-        return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred, from_logits=True)
+    def loss(self):
+        # Ablation: drop the ignore_class=0 masking — train against padding too.
+        return tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
 
 class ConstantLR(TrainingParams):
