@@ -103,16 +103,18 @@ jobs:
           uv venv .wheel-env --python ${{ matrix.python-version }}
           if [ "$RUNNER_OS" = "Windows" ]; then
             VENV_BIN="$PWD/.wheel-env/Scripts"
+            VENV_PY="$VENV_BIN/python.exe"
           else
             VENV_BIN="$PWD/.wheel-env/bin"
+            VENV_PY="$VENV_BIN/python"
           fi
           # PATH-prepend for all subsequent steps so `nakdimon`, `diacritize`,
           # `python` resolve from the freshly installed wheel — and resolve
-          # without OS-specific `.exe` handling.
+          # without OS-specific `.exe` handling in subsequent steps.
           echo "$VENV_BIN" >> "$GITHUB_PATH"
           # `uv venv` doesn't seed pip; use uv's resolver to install the wheel
           # into that specific venv directly.
-          uv pip install --python "$VENV_BIN/python" dist/nakdimon-*.whl
+          uv pip install --python "$VENV_PY" dist/nakdimon-*.whl
       - name: CLI works from a directory without tests/ — version / help
         shell: bash
         run: |
