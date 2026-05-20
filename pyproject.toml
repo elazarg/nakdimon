@@ -52,7 +52,7 @@ include = ["nakdimon"]
 namespaces = false
 
 [tool.setuptools.package-data]
-nakdimon = ["Nakdimon.onnx"]
+nakdimon = ["data/Nakdimon.onnx"]
 
 [project.urls]
 Homepage = "https://github.com/elazarg/nakdimon"

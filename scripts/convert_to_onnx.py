@@ -3,7 +3,7 @@
 Run after `nakdimon train`. The resulting .onnx is what gets shipped in the wheel
 (see [tool.setuptools.package-data] in pyproject.toml).
 
-    python scripts/convert_to_onnx.py path/to/model.h5 nakdimon/Nakdimon.onnx
+    python scripts/convert_to_onnx.py path/to/model.h5 nakdimon/data/Nakdimon.onnx
 """
 
 from __future__ import annotations

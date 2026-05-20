@@ -38,7 +38,7 @@ Then:
 > python -m nakdimon results --test_set=tests/new --systems Snopi Morfix Dicta MajAllWithDicta Nakdimon
 ```
 The trained `.h5` is converted to `.onnx` once; the runtime predictor consumes `.onnx`.
-By default, the bundled model is `nakdimon/Nakdimon.onnx` (shipped in the wheel).
+By default, the bundled model is `nakdimon/data/Nakdimon.onnx` (shipped in the wheel).
 
 The second step asks the Nakdimon server to predict the diacritics for the test set. You may skip this step.
 A folder for the results is created in the chosen test folder, with the same name as the model; in this case, `tests/new/NakdimonNew`.
