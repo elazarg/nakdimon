@@ -82,6 +82,10 @@ jobs:
     # the CLI assumed `tests/` existed in the user's CWD.
     name: wheel-install (${{ matrix.os }} / ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    env:
+      # PEP 540 UTF-8 mode — Windows Python's default cp1252 stdout encoding
+      # can't print Hebrew characters from this job's smoke tests.
+      PYTHONUTF8: "1"
     strategy:
       fail-fast: false
       matrix:
