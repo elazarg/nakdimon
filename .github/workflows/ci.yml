@@ -74,3 +74,65 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - run: uvx ruff check nakdimon scripts tests
+
+  wheel-install:
+    # Builds the wheel and installs it into a clean venv on a clean working
+    # directory, then runs the CLI from there. Catches packaging-boundary
+    # bugs that source-tree tests miss — like the v0.2.0 regression where
+    # the CLI assumed `tests/` existed in the user's CWD.
+    name: wheel-install (${{ matrix.os }} / ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12", "3.13", "3.14"]
+        include:
+          - os: windows-latest
+            python-version: "3.13"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build wheel
+        run: uv build --wheel
+      - name: Install wheel into fresh venv
+        shell: bash
+        run: |
+          uv venv .wheel-env --python ${{ matrix.python-version }}
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            VENV_BIN="$PWD/.wheel-env/Scripts"
+          else
+            VENV_BIN="$PWD/.wheel-env/bin"
+          fi
+          # PATH-prepend for all subsequent steps so `nakdimon`, `diacritize`,
+          # `python` resolve from the freshly installed wheel — and resolve
+          # without OS-specific `.exe` handling.
+          echo "$VENV_BIN" >> "$GITHUB_PATH"
+          "$VENV_BIN/python" -m pip install --upgrade pip
+          "$VENV_BIN/pip" install dist/nakdimon-*.whl
+      - name: CLI works from a directory without tests/ — version / help
+        shell: bash
+        run: |
+          mkdir -p empty_cwd
+          cd empty_cwd
+          nakdimon --version
+          nakdimon --help > /dev/null
+          nakdimon predict --help > /dev/null
+          nakdimon train --help > /dev/null
+          nakdimon run_test --help > /dev/null
+          nakdimon results --help > /dev/null
+      - name: Predict end-to-end from the installed wheel
+        shell: bash
+        run: |
+          cd empty_cwd
+          echo 'שלום עולם' > input.txt
+          diacritize input.txt -o=output.txt
+          cat output.txt
+          # Output must contain a niqqud mark in the U+05B0–U+05C7 range.
+          python -c "
+          text = open('output.txt', encoding='utf-8').read()
+          assert any(0x05B0 <= ord(c) <= 0x05C7 for c in text), f'no niqqud in {text!r}'
+          print('OK:', text.strip())
+          "
