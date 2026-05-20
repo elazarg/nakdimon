@@ -58,6 +58,9 @@ jobs:
           assert 'ָ' in out or 'ַ' in out or 'ֹ' in out, f'no niqqud in output: {out!r}'
           print('predict OK:', out)
           "
+      - name: CLI tests (core)
+        if: matrix.extras == 'core'
+        run: uv run --with pytest pytest -v tests/test_cli.py
       - name: Training smoke test
         if: matrix.extras == 'train'
         env:

@@ -2,8 +2,27 @@ import argparse
 import logging
 import os
 import sys
+from importlib.metadata import PackageNotFoundError, version
 
 from nakdimon.config import MAIN_MODEL
+
+try:
+    __version__ = version("nakdimon")
+except PackageNotFoundError:  # editable install or unreleased checkout
+    __version__ = "0.0.0+local"
+
+
+def _discover_test_sets(base: str = "tests") -> list[str]:
+    """Find tests/<x>/ subdirs that contain an expected/ folder. Empty when
+    invoked outside the source checkout, which is the common case for the
+    installed CLI — that's fine, the run_test / results commands fall back to
+    treating --test_set as a free-form path argument."""
+    try:
+        entries = os.listdir(base)
+    except (FileNotFoundError, NotADirectoryError, PermissionError):
+        return []
+    return [f"{base}/{f}" for f in entries
+            if os.path.isdir(f"{base}/{f}/expected")]
 
 
 def do_train(**kwargs) -> None:
@@ -45,6 +64,7 @@ def main() -> None:
         description="""Train and evaluate Nakdimon and other diacritizers. Reproduce the Nakdimon paper.""",
     )
     parser.add_argument('-q', '--quiet', action='store_true', help='suppress info logging.', default=False)
+    parser.add_argument('-V', '--version', action='version', version=f'nakdimon {__version__}')
 
     subparsers = parser.add_subparsers(help='sub-command help', dest="command", required=True)
 
@@ -55,12 +75,11 @@ def main() -> None:
     parser_train.set_defaults(func=do_train)
 
     test_systems = ['Snopi', 'Morfix', 'Dicta', 'Nakdimon', 'MajMod', 'MajAllWithDicta', 'MajAllWithoutDicta']
-    # iterate over folders to find available options:
-    available_tests = [f'tests/{folder}' for folder in os.listdir('tests/')
-                       if os.path.isdir(f'tests/{folder}') and os.path.isdir(f'tests/{folder}/expected')]
+    available_tests = _discover_test_sets()
 
     parser_test = subparsers.add_parser('run_test', help='diacritize a test set')
-    parser_test.add_argument('--test_set', choices=available_tests, help='choose test set', default='tests/new')
+    parser_test.add_argument('--test_set', help='choose test set (path to a directory with expected/ subdir)',
+                             default='tests/new')
     parser_test.add_argument('--system', choices=test_systems, help='diacritization system to use', default='Nakdimon')
     parser_test.add_argument('--model', help='path to model (.onnx file)', default=MAIN_MODEL, dest='model_path')
     parser_test.add_argument('--skip-existing', action='store_true', help='skip existing files')
@@ -75,14 +94,20 @@ def main() -> None:
     # parser_daemon.set_defaults(func=do_server)
 
     parser_eval = subparsers.add_parser('results', help='evaluate the results of a test run')
-    parser_eval.add_argument('--test_set', choices=available_tests, help='choose test set', default='tests/new')
+    parser_eval.add_argument('--test_set', help='choose test set (path to a directory with expected/ subdir)',
+                             default='tests/new')
     partial_result, _ = parser.parse_known_args()
-    if partial_result.command == 'results':
+    if partial_result.command == 'results' and os.path.isdir(partial_result.test_set):
         test_systems = [folder for folder in os.listdir(partial_result.test_set)
                         if os.path.isdir(f'{partial_result.test_set}/{folder}') and folder != 'expected']
-    parser_eval.add_argument('--systems', choices=test_systems, nargs='+', help='list of systems to evaluate',
+    parser_eval.add_argument('--systems', nargs='+', help='list of systems to evaluate',
                              default=test_systems)
     parser_eval.set_defaults(func=do_metrics)
+
+    # Reference available_tests in help text so it is not unused when populated.
+    if available_tests:
+        parser_test.epilog = f"discovered test sets: {', '.join(available_tests)}"
+        parser_eval.epilog = parser_test.epilog
 
     args = parser.parse_args()
 
