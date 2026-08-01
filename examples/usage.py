@@ -1,4 +1,4 @@
-# pip install git+https://github.com/nakdimon/nakdimon.git
+# pip install nakdimon
 
 from nakdimon import diacritize
 

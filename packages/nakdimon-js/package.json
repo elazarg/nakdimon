@@ -1,0 +1,28 @@
+{
+  "name": "nakdimon",
+  "version": "2.0.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "description": "Hebrew niqqud (diacritics) restoration — text layer + ONNX runtime wrapper",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "embed-spec": "node scripts/embed-spec.mjs",
+    "test": "npm run build && node --test test/"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20"
+  }
+}

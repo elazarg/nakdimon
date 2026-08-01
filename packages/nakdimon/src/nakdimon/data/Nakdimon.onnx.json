@@ -1,0 +1,7 @@
+{
+ "inventory": "v1",
+ "window": 10000,
+ "pad_to_window": true,
+ "overlap": 0,
+ "comment": "original Nakdimon model (paper); v1 inventory and windowing, byte-pinned by spec/golden/predict_v1.json"
+}

@@ -11,3 +11,5 @@ wandb
 cert
 venv/
 nakdimon.egg*
+.venv/
+*.egg-info/

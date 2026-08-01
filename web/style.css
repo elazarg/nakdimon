@@ -1,0 +1,154 @@
+@import url(https://fonts.googleapis.com/earlyaccess/alefhebrew.css?display=swap);
+
+:root {
+  --blue: #0b5394;
+  --blue-hover: #1465ac;
+  --blue-active: #094270;
+  --bg: #ffffff;
+  --panel-bg: #eafdfb;
+  --border: #cfe8e6;
+  --text: #222;
+  --muted: #667;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+}
+
+h1 {
+  text-align: center;
+  color: var(--blue);
+  font-size: 3rem;
+  margin: 0.6em 0 0.2em;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+#status {
+  text-align: center;
+  min-height: 1.6em;
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+#status.error {
+  color: #c43c35;
+  font-weight: bold;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.75rem;
+}
+
+.field label {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+textarea {
+  font-family: "Alef Hebrew", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 1.5rem;
+  line-height: 1.5;
+  text-align: right;
+  min-height: 22vh;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  background-color: var(--panel-bg);
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+}
+
+textarea:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+#output {
+  white-space: pre-wrap;
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 1.25rem;
+}
+
+button {
+  font-family: inherit;
+  font-size: 1.2rem;
+  padding: 0.6rem 1.4rem;
+  margin: 0;
+  cursor: pointer;
+  border: 1px solid var(--blue);
+  border-radius: 6px;
+  color: #fff;
+  background-color: var(--blue);
+  transition: background-color 0.15s ease-out;
+}
+
+button:hover:not(:disabled) {
+  background-color: var(--blue-hover);
+}
+
+button:active:not(:disabled) {
+  background-color: var(--blue-active);
+}
+
+button:disabled {
+  cursor: default;
+  border-color: #ccc;
+  background-color: #ccc;
+  color: #888;
+}
+
+button.secondary {
+  color: var(--blue);
+  background-color: #fff;
+}
+
+button.secondary:hover:not(:disabled) {
+  background-color: #eef6fb;
+}
+
+footer {
+  margin-top: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+  padding-top: 1.5rem;
+}
+
+footer a {
+  color: var(--blue);
+}
