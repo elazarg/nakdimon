@@ -119,6 +119,8 @@ def train(
     inventory = corpus.load_inventory("v2")
     mixture = Mixture(cfg, inventory)
     validation = corpus.encode_corpus((cfg.validation_path,), cfg.window, inventory)
+    # Periodic eval runs on a fixed subset (cheap); the final eval uses the full set.
+    validation_small = {key: value[:512] for key, value in validation.items()}
 
     model = NakdimonV2(model_cfg)
     if init_backbone:
@@ -156,8 +158,8 @@ def train(
         if out_path and cfg.checkpoint_every and step and step % cfg.checkpoint_every == 0:
             save_checkpoint(model, cfg, out_path)
         if cfg.eval_every and step and step % cfg.eval_every == 0:
-            acc = masked_accuracy(model, validation, cfg.device)
-            logging.info(f"step {step} validation: N {acc['N']:.4f} D {acc['D']:.4f} S {acc['S']:.4f}")
+            acc = masked_accuracy(model, validation_small, cfg.device)
+            logging.info(f"step {step} validation(sub): N {acc['N']:.4f} D {acc['D']:.4f} S {acc['S']:.4f}")
 
     acc = masked_accuracy(model, validation, cfg.device)
     logging.info(f"validation masked accuracy: N {acc['N']:.4f} D {acc['D']:.4f} S {acc['S']:.4f}")
@@ -179,11 +181,14 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=None)
     parser.add_argument("--window", type=int, default=None)
     parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--warmup-steps", type=int, default=None)
+    parser.add_argument("--checkpoint-every", type=int, default=None)
+    parser.add_argument("--eval-every", type=int, default=None)
     parser.add_argument("--init", default=None, help="optional pretrained backbone checkpoint (pretrain.py)")
     args = parser.parse_args()
 
     cfg = SMOKE if args.smoke else TrainConfig()
-    for name in ("steps", "window", "batch_size"):
+    for name in ("steps", "window", "batch_size", "warmup_steps", "checkpoint_every", "eval_every"):
         value = getattr(args, name)
         if value is not None:
             cfg = replace(cfg, **{name: value})
